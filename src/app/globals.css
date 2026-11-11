@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: Pretendard, 'Apple SD Gothic Neo', ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  /* 키오스크 기기를 감싼 벽 색 */
+  background: #333d4b;
+  font-family: var(--font-sans);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 마이크 입력 파형 */
+@keyframes kwave {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* 배출구·삽입구를 알려 주는 맥박 */
+@keyframes kpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(210, 38, 31, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 1.4em rgba(210, 38, 31, 0);
+  }
+}
