@@ -1,20 +1,23 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { formatPhone } from '@/lib/dialog';
-import { phoneSchema, type PhoneForm } from '@/lib/schemas';
-import { useKioskStore } from '@/store/kiosk-store';
-import { ActionButton, KioskButton } from '@/components/ui/kiosk-button';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { formatPhone } from "@/lib/dialog";
+import { phoneSchema, type PhoneForm } from "@/lib/schemas";
+import { useKioskStore } from "@/store/kiosk-store";
+import { ActionButton, KioskButton } from "@/components/ui/kiosk-button";
 
-const POINT_FORM_ID = 'point-form';
+const POINT_FORM_ID = "point-form";
 
 /** 표시 라벨 → pressPhoneKey에 넘길 키 */
 const KEYS: { label: string; value: string }[] = [
-  ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => ({ label: d, value: d })),
-  { label: '지움', value: 'back' },
-  { label: '0', value: '0' },
-  { label: '전체 삭제', value: 'clear' },
+  ...["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => ({
+    label: d,
+    value: d,
+  })),
+  { label: "지움", value: "back" },
+  { label: "0", value: "0" },
+  { label: "전체 삭제", value: "clear" },
 ];
 
 /**
@@ -46,14 +49,15 @@ export function PointScreen() {
       <div>
         <h2 className="text-[1.45em] font-bold">스탬프를 적립할까요?</h2>
         <p className="mt-[0.25em] text-[0.85em] font-semibold text-(--k-sub)">
-          전화번호 전체 또는 뒷자리 4자리를 입력해 주세요 · 음료 1잔당 스탬프 1개
+          전화번호 전체 또는 뒷자리 4자리를 입력해 주세요 · 음료 1잔당 스탬프
+          1개
         </p>
       </div>
 
       <output
         htmlFor="phone-keypad"
         className="block rounded-[1em] border-[1.5px] border-(--k-edge) bg-(--k-soft) px-[1em] py-[0.7em] text-center text-[1.6em] font-bold tracking-[0.05em]"
-        style={{ color: phone ? 'var(--k-fg)' : 'var(--k-sub)' }}
+        style={{ color: phone ? "var(--k-fg)" : "var(--k-sub)" }}
       >
         {formatPhone(phone)}
       </output>
@@ -70,7 +74,7 @@ export function PointScreen() {
             key={key.value}
             onClick={() => pressPhoneKey(key.value)}
             className={`min-h-[3.3em] rounded-[0.8em] ${
-              /\d/.test(key.label) ? 'text-[1.4em]' : 'text-[0.9em]'
+              /\d/.test(key.label) ? "text-[1.4em]" : "text-[0.9em]"
             }`}
           >
             {key.label}

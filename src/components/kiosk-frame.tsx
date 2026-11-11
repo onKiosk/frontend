@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { MODE_LABEL } from '@/data/menu';
-import { themeFor, themeVars } from '@/lib/theme';
-import { useKioskStore } from '@/store/kiosk-store';
-import { KIOSK_HEIGHT, KIOSK_WIDTH } from '@/hooks/use-kiosk-scale';
-import { AiBanner } from '@/components/ai-banner';
-import { SayChips } from '@/components/say-chips';
-import { StaffModal } from '@/components/staff-modal';
-import { KioskButton } from '@/components/ui/kiosk-button';
-import { CartFooter, CartScreen } from '@/components/screens/cart-screen';
-import { MenuFooter, MenuScreen } from '@/components/screens/menu-screen';
-import { OptionFooter, OptionScreen } from '@/components/screens/option-screen';
+import { MODE_LABEL } from "@/data/menu";
+import { themeFor, themeVars } from "@/lib/theme";
+import { useKioskStore } from "@/store/kiosk-store";
+import { KIOSK_HEIGHT, KIOSK_WIDTH } from "@/hooks/use-kiosk-scale";
+import { AiBanner } from "@/components/ai-banner";
+import { SayChips } from "@/components/say-chips";
+import { StaffModal } from "@/components/staff-modal";
+import { KioskButton } from "@/components/ui/kiosk-button";
+import { CartFooter, CartScreen } from "@/components/screens/cart-screen";
+import { MenuFooter, MenuScreen } from "@/components/screens/menu-screen";
+import { OptionFooter, OptionScreen } from "@/components/screens/option-screen";
 import {
   PayFooter,
   PayScreen,
   PayingFooter,
   PayingScreen,
-} from '@/components/screens/pay-screen';
-import { PointFooter, PointScreen } from '@/components/screens/point-screen';
+} from "@/components/screens/pay-screen";
+import { PointFooter, PointScreen } from "@/components/screens/point-screen";
 import {
   DoneFooter,
   DoneScreen,
   ReceiptFooter,
   ReceiptScreen,
-} from '@/components/screens/receipt-screen';
-import { StartFooter, StartScreen } from '@/components/screens/start-screen';
+} from "@/components/screens/receipt-screen";
+import { StartFooter, StartScreen } from "@/components/screens/start-screen";
 
 interface Props {
   scale: number;
@@ -39,7 +39,7 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
   const callStaff = useKioskStore((s) => s.callStaff);
 
   const theme = themeFor(mode);
-  const isLow = mode === 'low';
+  const isLow = mode === "low";
 
   return (
     <div
@@ -54,12 +54,16 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
       }}
     >
       <header className="flex h-[3.4em] flex-none items-center justify-between border-b border-(--k-line) bg-(--k-surface) px-[1.1em]">
-        <div className="text-[1.1em] font-bold tracking-[-0.02em]">온키오스크 카페</div>
+        <div className="text-[1.1em] font-bold tracking-[-0.02em]">
+          온키오스크 카페
+        </div>
         <div className="flex items-center gap-[0.6em]">
-          <div className="text-[0.78em] font-bold text-(--k-sub)">{MODE_LABEL[mode]}</div>
+          <div className="text-[0.78em] font-bold text-(--k-sub)">
+            {MODE_LABEL[mode]}
+          </div>
           <KioskButton
             className="rounded-[0.8em] px-[0.85em] py-[0.4em] text-[0.85em]"
-            onClick={() => go('start')}
+            onClick={() => go("start")}
           >
             모드 변경
           </KioskButton>
@@ -73,7 +77,7 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
         </div>
       )}
 
-      {screen !== 'start' && <AiBanner onToggleListen={onToggleListen} />}
+      {screen !== "start" && <AiBanner onToggleListen={onToggleListen} />}
       <SayChips />
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-auto">
@@ -88,7 +92,7 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
         {isLow && (
           <button
             type="button"
-            onClick={() => go('start')}
+            onClick={() => go("start")}
             className="min-h-[3.3em] flex-1 border-none border-r-2 border-white/50 bg-(--k-red) text-[0.95em] font-bold text-white"
           >
             모드 변경
@@ -112,23 +116,23 @@ function ScreenBody({ onToggleListen }: { onToggleListen: () => void }) {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
-    case 'start':
+    case "start":
       return <StartScreen onToggleListen={onToggleListen} />;
-    case 'menu':
+    case "menu":
       return <MenuScreen />;
-    case 'option':
+    case "option":
       return <OptionScreen />;
-    case 'cart':
+    case "cart":
       return <CartScreen />;
-    case 'point':
+    case "point":
       return <PointScreen />;
-    case 'pay':
+    case "pay":
       return <PayScreen />;
-    case 'paying':
+    case "paying":
       return <PayingScreen />;
-    case 'receipt':
+    case "receipt":
       return <ReceiptScreen />;
-    case 'done':
+    case "done":
       return <DoneScreen />;
   }
 }
@@ -137,23 +141,23 @@ function ScreenFooter() {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
-    case 'start':
+    case "start":
       return <StartFooter />;
-    case 'menu':
+    case "menu":
       return <MenuFooter />;
-    case 'option':
+    case "option":
       return <OptionFooter />;
-    case 'cart':
+    case "cart":
       return <CartFooter />;
-    case 'point':
+    case "point":
       return <PointFooter />;
-    case 'pay':
+    case "pay":
       return <PayFooter />;
-    case 'paying':
+    case "paying":
       return <PayingFooter />;
-    case 'receipt':
+    case "receipt":
       return <ReceiptFooter />;
-    case 'done':
+    case "done":
       return <DoneFooter />;
   }
 }

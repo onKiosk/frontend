@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { bannerText } from '@/lib/dialog';
-import { useDialogState, useKioskStore } from '@/store/kiosk-store';
+import { bannerText } from "@/lib/dialog";
+import { useDialogState, useKioskStore } from "@/store/kiosk-store";
 
 const BARS = [0.5, 0.8, 1, 0.7, 0.9, 0.6, 1, 0.75, 0.55];
 
@@ -13,7 +13,10 @@ function VoiceWave() {
         <div
           key={i}
           className="w-1 rounded-[2px] bg-(--k-banner-fg)"
-          style={{ height: 34 * height, animation: `kwave .9s ease-in-out ${i * 0.08}s infinite` }}
+          style={{
+            height: 34 * height,
+            animation: `kwave .9s ease-in-out ${i * 0.08}s infinite`,
+          }}
         />
       ))}
     </div>
@@ -38,28 +41,36 @@ export function AiBanner({ onToggleListen }: { onToggleListen: () => void }) {
     >
       <div className="min-w-0 flex-1">
         <div className="mb-[0.25em] text-[0.72em] font-bold opacity-85">
-          {transcript ? `“${transcript}”` : dialog.mode === 'voice'
-            ? voicePaused ? '자동 듣기 일시 정지' : '음성 모드 · 안내 후 자동으로 들어요'
-            : 'AI 안내 · 음성 + 자막'}
+          {transcript
+            ? `“${transcript}”`
+            : dialog.mode === "voice"
+              ? voicePaused
+                ? "자동 듣기 일시 정지"
+                : "음성 모드 · 안내 후 자동으로 들어요"
+              : "AI 안내 · 음성 + 자막"}
         </div>
         <div className="text-[1.15em] font-bold leading-[1.35] tracking-[-0.02em] text-pretty">
-          {listening ? '듣고 있어요…' : bannerText(dialog)}
+          {listening ? "듣고 있어요…" : bannerText(dialog)}
         </div>
       </div>
       {listening && <VoiceWave />}
       <button
         type="button"
         onClick={onToggleListen}
-        aria-pressed={dialog.mode === 'voice' ? !voicePaused : listening}
+        aria-pressed={dialog.mode === "voice" ? !voicePaused : listening}
         className="h-[4.4em] w-[4.4em] flex-none rounded-full border-[1.5px] border-(--k-banner-fg) text-[0.78em] font-bold leading-[1.15]"
         style={{
-          background: listening ? 'var(--k-red)' : 'transparent',
-          color: listening ? '#fff' : 'var(--k-banner-fg)',
+          background: listening ? "var(--k-red)" : "transparent",
+          color: listening ? "#fff" : "var(--k-banner-fg)",
         }}
       >
-        {dialog.mode === 'voice'
-          ? voicePaused ? '다시 듣기' : '음성 멈추기'
-          : listening ? '멈추기' : '눌러서 말하기'}
+        {dialog.mode === "voice"
+          ? voicePaused
+            ? "다시 듣기"
+            : "음성 멈추기"
+          : listening
+            ? "멈추기"
+            : "눌러서 말하기"}
       </button>
     </div>
   );

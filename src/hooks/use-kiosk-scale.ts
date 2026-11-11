@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export const KIOSK_WIDTH = 540;
 export const KIOSK_HEIGHT = 960;
@@ -25,8 +25,8 @@ export function useKioskScale() {
         ),
       );
     measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, []);
 
   return scale;

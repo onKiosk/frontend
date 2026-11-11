@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes } from "react";
 
-type Variant = 'soft' | 'primary' | 'danger';
+type Variant = "soft" | "primary" | "danger";
 
 const VARIANT: Record<Variant, string> = {
-  soft: 'border-[1.5px] border-(--k-edge) bg-(--k-soft) text-(--k-fg)',
-  primary: 'border-none bg-(--k-ink) text-(--k-ink-fg)',
-  danger: 'border-none bg-(--k-red) text-white',
+  soft: "border-[1.5px] border-(--k-edge) bg-(--k-soft) text-(--k-fg)",
+  primary: "border-none bg-(--k-ink) text-(--k-ink-fg)",
+  danger: "border-none bg-(--k-red) text-white",
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,7 +15,12 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** 키오스크 기본 버튼 — 손가락으로 누를 수 있는 크기를 기본값으로 잡는다. */
-export function KioskButton({ variant = 'soft', className = '', type = 'button', ...rest }: Props) {
+export function KioskButton({
+  variant = "soft",
+  className = "",
+  type = "button",
+  ...rest
+}: Props) {
   return (
     <button
       type={type}
@@ -26,6 +31,11 @@ export function KioskButton({ variant = 'soft', className = '', type = 'button',
 }
 
 /** 액션 바에 들어가는 큰 버튼 */
-export function ActionButton({ className = '', ...rest }: Props) {
-  return <KioskButton className={`min-h-[4em] text-[1.1em] ${className}`} {...rest} />;
+export function ActionButton({ className = "", ...rest }: Props) {
+  return (
+    <KioskButton
+      className={`min-h-[4em] text-[1.1em] ${className}`}
+      {...rest}
+    />
+  );
 }

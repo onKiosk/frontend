@@ -1,19 +1,31 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { ICE_LEVELS, LARGE_SURCHARGE, type IceKey, type SizeKey, type TempKey } from '@/data/menu';
-import { won } from '@/lib/korean';
-import { extrasFor, missingOption, unitPrice, type OptionDraft } from '@/lib/pricing';
-import { optionSchema, type OptionForm } from '@/lib/schemas';
-import { useKioskStore } from '@/store/kiosk-store';
-import { ActionButton } from '@/components/ui/kiosk-button';
-import { SelectButton } from '@/components/ui/select-button';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  ICE_LEVELS,
+  LARGE_SURCHARGE,
+  type IceKey,
+  type SizeKey,
+  type TempKey,
+} from "@/data/menu";
+import { won } from "@/lib/korean";
+import {
+  extrasFor,
+  missingOption,
+  unitPrice,
+  type OptionDraft,
+} from "@/lib/pricing";
+import { optionSchema, type OptionForm } from "@/lib/schemas";
+import { useKioskStore } from "@/store/kiosk-store";
+import { ActionButton } from "@/components/ui/kiosk-button";
+import { SelectButton } from "@/components/ui/select-button";
 
-const OPTION_FORM_ID = 'option-form';
+const OPTION_FORM_ID = "option-form";
 
 const photoStyle = {
-  background: 'repeating-linear-gradient(135deg,var(--k-soft) 0 6px,var(--k-bg) 6px 12px)',
+  background:
+    "repeating-linear-gradient(135deg,var(--k-soft) 0 6px,var(--k-bg) 6px 12px)",
 } as const;
 
 const toFormValues = (draft: OptionDraft): OptionForm => ({
@@ -46,21 +58,21 @@ export function OptionScreen() {
   const { item } = draft;
 
   const tempOptions: { key: TempKey; label: string }[] = item.iceOnly
-    ? [{ key: 'ice', label: 'ICE 차갑게' }]
+    ? [{ key: "ice", label: "ICE 차갑게" }]
     : [
-        { key: 'hot', label: 'HOT 따뜻하게' },
-        { key: 'ice', label: 'ICE 차갑게' },
+        { key: "hot", label: "HOT 따뜻하게" },
+        { key: "ice", label: "ICE 차갑게" },
       ];
 
   const sizeOptions: { key: SizeKey; label: string }[] = [
-    { key: 'regular', label: '레귤러' },
-    { key: 'large', label: `라지 (+${LARGE_SURCHARGE}원)` },
+    { key: "regular", label: "레귤러" },
+    { key: "large", label: `라지 (+${LARGE_SURCHARGE}원)` },
   ];
 
   const tempNote = item.iceOnly
-    ? 'ICE만 가능해요'
-    : (errors.temp?.message ?? (draft.temp ? '' : '선택해 주세요'));
-  const sizeNote = errors.size?.message ?? (draft.size ? '' : '선택해 주세요');
+    ? "ICE만 가능해요"
+    : (errors.temp?.message ?? (draft.temp ? "" : "선택해 주세요"));
+  const sizeNote = errors.size?.message ?? (draft.size ? "" : "선택해 주세요");
 
   return (
     <form
@@ -69,7 +81,10 @@ export function OptionScreen() {
       className="flex flex-col gap-[1em] px-[1.1em] py-[1em]"
     >
       <div className="flex items-center gap-[1em]">
-        <div className="h-[4.8em] w-[4.8em] flex-none rounded-[0.8em]" style={photoStyle} />
+        <div
+          className="h-[4.8em] w-[4.8em] flex-none rounded-[0.8em]"
+          style={photoStyle}
+        />
         <div className="flex-1">
           <div className="text-[1.4em] font-bold">{item.name}</div>
           <div className="mt-[0.2em] font-bold text-(--k-sub)">
@@ -82,7 +97,9 @@ export function OptionScreen() {
             symbol="−"
             onClick={() => updateDraft({ qty: Math.max(1, draft.qty - 1) })}
           />
-          <div className="min-w-[1.6em] text-center text-[1.15em] font-bold">{draft.qty}</div>
+          <div className="min-w-[1.6em] text-center text-[1.15em] font-bold">
+            {draft.qty}
+          </div>
           <QtyButton
             label="수량 늘리기"
             symbol="+"
@@ -119,7 +136,7 @@ export function OptionScreen() {
             ))}
           </OptionGroup>
 
-          {draft.temp === 'ice' && (
+          {draft.temp === "ice" && (
             <OptionGroup title="얼음 양" note="">
               {ICE_LEVELS.map((o) => (
                 <SelectButton
@@ -152,7 +169,9 @@ function OptionGroup({
     <fieldset className="flex flex-col gap-[0.45em] border-none p-0">
       <legend className="flex gap-[0.5em] p-0">
         <span className="text-[0.95em] font-bold">{title}</span>
-        {note && <span className="text-[0.78em] font-bold text-(--k-red)">{note}</span>}
+        {note && (
+          <span className="text-[0.78em] font-bold text-(--k-red)">{note}</span>
+        )}
       </legend>
       <div className="flex gap-[0.45em]">{children}</div>
     </fieldset>
@@ -205,7 +224,7 @@ export function OptionFooter() {
               >
                 <span>{extra.label}</span>
                 <span className="text-[0.85em] font-semibold opacity-80">
-                  {extra.price ? `+${extra.price}원` : '무료'}
+                  {extra.price ? `+${extra.price}원` : "무료"}
                 </span>
               </SelectButton>
             ))}
@@ -213,7 +232,7 @@ export function OptionFooter() {
         </>
       )}
       <div className="flex gap-[0.55em]">
-        <ActionButton className="flex-1" onClick={() => go('menu')}>
+        <ActionButton className="flex-1" onClick={() => go("menu")}>
           이전
         </ActionButton>
         <ActionButton
@@ -223,7 +242,7 @@ export function OptionFooter() {
           className="flex-[2.2]"
           style={{ opacity: blocked ? 0.45 : 1 }}
         >
-          {editIndex >= 0 ? '변경 완료' : '장바구니에 담기'}
+          {editIndex >= 0 ? "변경 완료" : "장바구니에 담기"}
         </ActionButton>
       </div>
     </>

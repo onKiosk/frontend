@@ -1,18 +1,21 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef } from 'react';
-import { spokenText, staffTexts } from '@/lib/dialog';
-import { SpeechSession } from '@/lib/speech-session';
-import { useKioskStore } from '@/store/kiosk-store';
+import { useCallback, useEffect, useRef } from "react";
+import { spokenText, staffTexts } from "@/lib/dialog";
+import { SpeechSession } from "@/lib/speech-session";
+import { useKioskStore } from "@/store/kiosk-store";
 
 /** 음성 모드에서는 안내가 끝날 때마다 다음 발화를 자동으로 기다린다. */
-export function useSpeech({ alwaysSpeak = false }: { alwaysSpeak?: boolean } = {}) {
+export function useSpeech({
+  alwaysSpeak = false,
+}: { alwaysSpeak?: boolean } = {}) {
   const session = useRef<SpeechSession | null>(null);
 
   useEffect(() => {
     const controller = new SpeechSession({
       createRecognition: () => {
-        const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+        const Recognition =
+          window.SpeechRecognition ?? window.webkitSpeechRecognition;
         return Recognition ? new Recognition() : null;
       },
       speak: (text, done) => {
@@ -21,7 +24,7 @@ export function useSpeech({ alwaysSpeak = false }: { alwaysSpeak?: boolean } = {
           return () => {};
         }
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR';
+        utterance.lang = "ko-KR";
         utterance.rate = 1.05;
         utterance.onend = done;
         utterance.onerror = done;
@@ -31,7 +34,8 @@ export function useSpeech({ alwaysSpeak = false }: { alwaysSpeak?: boolean } = {
           window.speechSynthesis.cancel();
         };
       },
-      onListening: (listening) => useKioskStore.getState().setListening(listening),
+      onListening: (listening) =>
+        useKioskStore.getState().setListening(listening),
       onPaused: (voicePaused) => useKioskStore.setState({ voicePaused }),
       onTranscript: (text) => useKioskStore.getState().setTranscript(text),
       onUtterance: (text) => useKioskStore.getState().handleUtterance(text),
@@ -41,9 +45,11 @@ export function useSpeech({ alwaysSpeak = false }: { alwaysSpeak?: boolean } = {
     const sync = () => {
       const state = useKioskStore.getState();
       controller.update({
-        automatic: state.mode === 'voice',
-        speak: state.mode === 'voice' || alwaysSpeak,
-        text: state.staff ? staffTexts(state.staff).join('. ') : spokenText(state),
+        automatic: state.mode === "voice",
+        speak: state.mode === "voice" || alwaysSpeak,
+        text: state.staff
+          ? staffTexts(state.staff).join(". ")
+          : spokenText(state),
       });
     };
     // 한 발화가 상태를 여러 번 바꾸더라도 최종 안내만 읽는다.
@@ -57,12 +63,12 @@ export function useSpeech({ alwaysSpeak = false }: { alwaysSpeak?: boolean } = {
       });
     });
     const visibility = () => controller.setVisible(!document.hidden);
-    document.addEventListener('visibilitychange', visibility);
+    document.addEventListener("visibilitychange", visibility);
     visibility();
     sync();
     return () => {
       unsubscribe();
-      document.removeEventListener('visibilitychange', visibility);
+      document.removeEventListener("visibilitychange", visibility);
       controller.dispose();
       session.current = null;
     };

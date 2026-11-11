@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { won } from '@/lib/korean';
-import { cartTotal, lineKey } from '@/lib/pricing';
-import { useKioskStore } from '@/store/kiosk-store';
-import { ActionButton, KioskButton } from '@/components/ui/kiosk-button';
+import { won } from "@/lib/korean";
+import { cartTotal, lineKey } from "@/lib/pricing";
+import { useKioskStore } from "@/store/kiosk-store";
+import { ActionButton, KioskButton } from "@/components/ui/kiosk-button";
 
 export function CartScreen() {
   const cart = useKioskStore((s) => s.cart);
@@ -15,7 +15,9 @@ export function CartScreen() {
   return (
     <div className="flex flex-col gap-[0.6em] px-[1.1em] py-[1em]">
       <div className="flex items-center justify-between">
-        <h2 className="text-[1.45em] font-bold tracking-[-0.02em]">주문을 확인해 주세요</h2>
+        <h2 className="text-[1.45em] font-bold tracking-[-0.02em]">
+          주문을 확인해 주세요
+        </h2>
         <KioskButton
           className="rounded-[0.7em] px-[0.8em] py-[0.4em] text-[0.8em]"
           onClick={clearCart}
@@ -41,17 +43,27 @@ export function CartScreen() {
                 {line.name} × {line.qty}
               </div>
               <div className="mt-[0.2em] text-[0.8em] font-semibold text-(--k-sub)">
-                {line.opt || '옵션 없음'}
+                {line.opt || "옵션 없음"}
               </div>
             </div>
-            <div className="whitespace-nowrap font-bold">{won(line.unit * line.qty)}</div>
+            <div className="whitespace-nowrap font-bold">
+              {won(line.unit * line.qty)}
+            </div>
           </div>
           <div className="flex items-center gap-[0.4em]">
-            <SquareButton label={`${line.name} 수량 줄이기`} onClick={() => changeLineQty(index, -1)}>
+            <SquareButton
+              label={`${line.name} 수량 줄이기`}
+              onClick={() => changeLineQty(index, -1)}
+            >
               −
             </SquareButton>
-            <div className="min-w-[1.6em] text-center font-bold">{line.qty}</div>
-            <SquareButton label={`${line.name} 수량 늘리기`} onClick={() => changeLineQty(index, 1)}>
+            <div className="min-w-[1.6em] text-center font-bold">
+              {line.qty}
+            </div>
+            <SquareButton
+              label={`${line.name} 수량 늘리기`}
+              onClick={() => changeLineQty(index, 1)}
+            >
               +
             </SquareButton>
             <div className="flex-1" />
@@ -108,7 +120,7 @@ export function CartFooter() {
 
   return (
     <div className="flex gap-[0.55em]">
-      <ActionButton className="flex-1" onClick={() => go('menu')}>
+      <ActionButton className="flex-1" onClick={() => go("menu")}>
         메뉴 더 담기
       </ActionButton>
       <ActionButton

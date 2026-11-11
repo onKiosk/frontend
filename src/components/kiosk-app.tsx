@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useKioskScale } from '@/hooks/use-kiosk-scale';
-import { useSpeech } from '@/hooks/use-speech';
-import { KioskFrame } from '@/components/kiosk-frame';
-import { StepNav } from '@/components/step-nav';
+import { useKioskScale } from "@/hooks/use-kiosk-scale";
+import { useSpeech } from "@/hooks/use-speech";
+import { KioskFrame } from "@/components/kiosk-frame";
+import { StepNav } from "@/components/step-nav";
 
 export function KioskApp() {
   const scale = useKioskScale();
