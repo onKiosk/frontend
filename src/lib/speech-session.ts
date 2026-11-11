@@ -193,7 +193,10 @@ export class SpeechSession {
           const pending = this.options.onUtterance(text);
           if (pending instanceof Promise) {
             // 서버 응답을 기다리는 동안은 듣지 않는다(안내 음성·다음 발화와 섞이지 않게). 끝나면 듣기를 예약한다.
-            pending.then(() => this.schedule(), () => this.schedule());
+            pending.then(
+              () => this.schedule(),
+              () => this.schedule(),
+            );
             return;
           }
         }
