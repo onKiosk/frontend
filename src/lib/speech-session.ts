@@ -5,7 +5,8 @@ export interface SpeechSessionOptions {
   onListening: (listening: boolean) => void;
   onPaused: (paused: boolean) => void;
   onTranscript: (text: string) => void;
-  onUtterance: (text: string) => void;
+  /** Promise를 돌려주면(서버 응답 대기) 끝난 뒤에 듣기를 다시 시작한다. */
+  onUtterance: (text: string) => void | Promise<void>;
   onError: (message: string) => void;
 }
 
@@ -188,7 +189,14 @@ export class SpeechSession {
         if (!result.isFinal) return;
         this.errors = 0;
         this.releaseEngine();
-        if (text.trim()) this.options.onUtterance(text);
+        if (text.trim()) {
+          const pending = this.options.onUtterance(text);
+          if (pending instanceof Promise) {
+            // 서버 응답을 기다리는 동안은 듣지 않는다(안내 음성·다음 발화와 섞이지 않게). 끝나면 듣기를 예약한다.
+            pending.then(() => this.schedule(), () => this.schedule());
+            return;
+          }
+        }
         this.schedule();
       };
       engine.onerror = (event) => {

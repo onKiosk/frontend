@@ -12,6 +12,8 @@ import {
   type PayKey,
   type ScreenKey,
 } from "@/data/menu";
+import { isActionApiEnabled, requestAction, toContext } from "@/lib/action-api";
+import { applyAction } from "@/lib/apply-action";
 import type { DialogState, StaffState } from "@/lib/dialog";
 import {
   applyOptionSpeech,
@@ -38,6 +40,9 @@ import {
 /** 음성을 이만큼 연속으로 못 알아들으면 직원 호출을 제안한다. */
 export const FAIL_LIMIT = 2;
 
+/** 발화마다 올리는 번호. 더 새로운 발화/리셋이 생기면 이전 서버 응답은 버린다. */
+let utteranceSeq = 0;
+
 export interface KioskState {
   screen: ScreenKey;
   mode: ModeKey;
@@ -48,6 +53,8 @@ export interface KioskState {
   editIndex: number;
   listening: boolean;
   voicePaused: boolean;
+  /** 서버(/api/action) 응답을 기다리는 중 — UI에서 "생각 중" 표시에 쓸 수 있다. */
+  thinking: boolean;
   transcript: string;
   /** 한 번만 띄우는 안내 문구 (있으면 기본 배너 문구를 덮는다) */
   say: string | null;
@@ -90,8 +97,12 @@ export interface KioskActions {
   closeStaff: () => void;
   setListening: (listening: boolean) => void;
   setTranscript: (transcript: string) => void;
-  /** 발화 한 건을 처리한다. 못 알아들으면 실패 카운트를 올린다. */
-  handleUtterance: (text: string) => void;
+  /**
+   * 발화 한 건을 처리한다. 못 알아들으면 실패 카운트를 올린다.
+   * 서버를 쓰는 발화는 Promise를 돌려준다(SpeechSession이 끝날 때까지 듣기를 미룬다).
+   * 서버 미설정/로컬 처리 발화는 이전처럼 동기로 끝나고 undefined를 돌려준다.
+   */
+  handleUtterance: (text: string) => void | Promise<void>;
   noteVoiceError: (message: string) => void;
 }
 
@@ -106,6 +117,7 @@ const INITIAL: KioskState = {
   editIndex: -1,
   listening: false,
   voicePaused: false,
+  thinking: false,
   transcript: "",
   say: null,
   fails: 0,
@@ -145,6 +157,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   },
 
   reset: () => {
+    utteranceSeq++; // 진행 중인 서버 응답은 버린다
     set({ ...INITIAL, mode: get().mode, voicePaused: get().voicePaused });
   },
 
@@ -337,17 +350,86 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   noteVoiceError: (message) => set({ listening: false, say: message }),
 
   handleUtterance: (text) => {
-    set({ transcript: text });
-    const understood = resolveIntent(get, text);
-    if (understood) {
-      set({ fails: 0 });
+    utteranceSeq++; // 이전 발화의 서버 응답이 아직 오는 중이면 버려지게 한다
+    set({ transcript: text, thinking: false });
+    if (!shouldAskServer(get(), text)) {
+      localUtterance(text);
       return;
     }
-    const fails = get().fails + 1;
-    if (fails >= FAIL_LIMIT) set({ fails: 0, staff: "fail" });
-    else set({ fails, say: "잘 알아듣지 못했어요. 다시 한 번 말씀해 주세요." });
+    return askServer(text);
   },
 }));
+
+/**
+ * 서버(LLM)를 거칠 발화인가. false면 기존 규칙(resolveIntent)만 쓴다.
+ * - 서버 미설정(NEXT_PUBLIC_ACTION_API_URL 없음)이면 항상 로컬 → 웹 데모/기존 동작 그대로
+ * - 결제 대기 중: 결제 취소만 받으면 되므로 로컬
+ * - 적립 화면의 숫자 발화: 전화번호를 LLM/로그로 보내지 않는다(개인정보 정책)
+ * - 옵션 화면(draft 진행 중): 데이터셋에 draft 키가 없으므로 기존 규칙으로 이어서 처리
+ * - 이전/뒤로/처음/기본 모드: 서버 Action 밖의 명령
+ */
+function shouldAskServer(s: KioskState, raw: string): boolean {
+  if (!isActionApiEnabled()) return false;
+  const said = squash(raw);
+  if (s.screen === "paying") return false;
+  if (s.screen === "point" && /\d/.test(said)) return false;
+  if (s.screen === "option" && s.draft) return false;
+  if (/이전|뒤로|처음|기본모드/.test(said)) return false;
+  return true;
+}
+
+/** 인식 실패 1회를 기록하고, FAIL_LIMIT에 닿으면 직원 호출을 제안한다. */
+function recordFailure() {
+  const fails = useKioskStore.getState().fails + 1;
+  if (fails >= FAIL_LIMIT) useKioskStore.setState({ fails: 0, staff: "fail" });
+  else
+    useKioskStore.setState({
+      fails,
+      say: "잘 알아듣지 못했어요. 다시 한 번 말씀해 주세요.",
+    });
+}
+
+/** 기존 규칙(resolveIntent)으로 처리 — 서버를 쓰지 않을 때와 서버 폴백 때 공통 */
+function localUtterance(text: string) {
+  if (resolveIntent(useKioskStore.getState, text)) {
+    useKioskStore.setState({ fails: 0 });
+    return;
+  }
+  recordFailure();
+}
+
+/**
+ * 서버에 물어 Action을 받아 화면에 반영한다.
+ * - 서버 실패(타임아웃/오류/검증 실패) → 기존 규칙으로 폴백. 서버가 no_action을 주면 폴백하지 않는다.
+ * - 기다리는 사이 더 새로운 발화/리셋/화면 전환이 있었으면 응답을 버린다.
+ */
+async function askServer(text: string): Promise<void> {
+  const seq = utteranceSeq; // handleUtterance가 이미 올려 둔 번호
+  const before = useKioskStore.getState();
+  useKioskStore.setState({ thinking: true });
+
+  const result = await requestAction(text, toContext(before));
+
+  if (seq !== utteranceSeq) return; // 더 새로운 발화(또는 리셋)가 이미 처리됨
+  useKioskStore.setState({ thinking: false });
+  const now = useKioskStore.getState();
+  if (now.screen !== before.screen) return; // 기다리는 사이 화면이 바뀜(터치 등)
+
+  if (result.kind === "fallback") {
+    localUtterance(text);
+    return;
+  }
+  const outcome = applyAction(
+    result.action,
+    now,
+    useKioskStore.setState,
+    text,
+    result.answerText,
+  );
+  if (outcome === "handled") useKioskStore.setState({ fails: 0 });
+  else if (outcome === "unrecognized") recordFailure();
+  else localUtterance(text); // 서버 Action은 맞지만 이 화면/메뉴에서 실행 불가 → 기존 규칙
+}
 
 /**
  * 발화 → 상태 변경. 처리했으면 true.
