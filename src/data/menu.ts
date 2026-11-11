@@ -37,8 +37,8 @@ export const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: "dessert", label: "디저트" },
 ];
 
-/** [이름, 가격, 플래그] — 's' 품절, 'i' ICE 전용 */
-type RawItem = [string, number] | [string, number, "s" | "i"];
+/** [이름, 가격, 플래그] — 's' 품절, 'i' ICE 전용, 'si' 품절 + ICE 전용 */
+type RawItem = [string, number] | [string, number, "s" | "i" | "si"];
 
 const RAW: Record<CategoryKey, RawItem[]> = {
   coffee: [
@@ -47,7 +47,7 @@ const RAW: Record<CategoryKey, RawItem[]> = {
     ["바닐라라떼", 5500],
     ["카푸치노", 5000],
     ["카페모카", 5500],
-    ["콜드브루", 5000, "s"],
+    ["콜드브루", 5000, "si"],
   ],
   latte: [
     ["초코라떼", 5000],
@@ -83,8 +83,8 @@ export const MENU_ITEMS: MenuItem[] = CATEGORIES.flatMap(({ key }) =>
     name,
     price,
     cat: key,
-    soldout: flag === "s",
-    iceOnly: flag === "i" || key === "ade",
+    soldout: !!flag?.includes("s"),
+    iceOnly: !!flag?.includes("i") || key === "ade",
     dessert: key === "dessert",
   })),
 );

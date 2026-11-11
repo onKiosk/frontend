@@ -46,8 +46,10 @@ export function extrasFor(item: MenuItem) {
   const milky = /라떼|카푸치노|모카/.test(item.name);
   return EXTRAS.filter(({ key }) => {
     if (key === "shot") return item.cat === "coffee";
-    if (key === "syrup") return true;
-    if (key === "light") return item.cat === "coffee" || item.cat === "tea";
+    if (key === "syrup")
+      return item.cat !== "tea" || item.name === "복숭아 아이스티";
+    if (key === "light")
+      return item.cat === "coffee" && item.name !== "콜드브루";
     return milky;
   });
 }
