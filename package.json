@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -20,14 +22,15 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.36.0",
     "eslint-config-next": "^15.5.4",
+    "prettier": "3.9.10",
     "tailwindcss": "^4.1.13",
-    "typescript": "^5.9.2",
-    "@eslint/eslintrc": "^3.3.1"
+    "typescript": "^5.9.2"
   }
 }
