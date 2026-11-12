@@ -38,7 +38,7 @@ export function StartFooter() {
 
   // '음성 모드' 제외하고 나머지 3개 모드만 필터링
   const visibleModes = MODES.filter(
-    (m) => m.key !== "voice" && !m.label.includes("음성")
+    (m) => m.key !== "voice" && !m.label.includes("음성"),
   );
 
   return (
