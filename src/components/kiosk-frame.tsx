@@ -4,8 +4,6 @@ import { MODE_LABEL } from "@/data/menu";
 import { themeFor, themeVars } from "@/lib/theme";
 import { useKioskStore } from "@/store/kiosk-store";
 import { KIOSK_HEIGHT, KIOSK_WIDTH } from "@/hooks/use-kiosk-scale";
-import { AiBanner } from "@/components/ai-banner";
-import { SayChips } from "@/components/say-chips";
 import { StaffModal } from "@/components/staff-modal";
 import { KioskButton } from "@/components/ui/kiosk-button";
 import { CartFooter, CartScreen } from "@/components/screens/cart-screen";
@@ -33,7 +31,6 @@ interface Props {
 
 /** 540×960 키오스크 화면 한 대. */
 export function KioskFrame({ scale, onToggleListen }: Props) {
-  const screen = useKioskStore((s) => s.screen);
   const mode = useKioskStore((s) => s.mode);
   const go = useKioskStore((s) => s.go);
   const callStaff = useKioskStore((s) => s.callStaff);
@@ -77,11 +74,8 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
         </div>
       )}
 
-      {screen !== "start" && <AiBanner onToggleListen={onToggleListen} />}
-      <SayChips />
-
       <div className="relative flex min-h-0 flex-1 flex-col overflow-auto">
-        <ScreenBody onToggleListen={onToggleListen} />
+        <ScreenBody />
       </div>
 
       <div className="flex flex-none flex-col gap-[0.55em] border-t border-(--k-line) bg-(--k-surface) px-[1.1em] py-[0.8em]">
@@ -112,12 +106,12 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
   );
 }
 
-function ScreenBody({ onToggleListen }: { onToggleListen: () => void }) {
+function ScreenBody() {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
     case "start":
-      return <StartScreen onToggleListen={onToggleListen} />;
+      return <StartScreen />;
     case "menu":
       return <MenuScreen />;
     case "option":

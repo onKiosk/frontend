@@ -147,24 +147,6 @@ const INITIAL: KioskState = {
   recommended: null,
 };
 
-/** 데모용 시드 장바구니 — 단계 이동 버튼으로 중간 화면을 바로 볼 때 채운다. */
-function seedCart(): CartLine[] {
-  const latte: OptionDraft = {
-    ...newDraft(MENU_ITEMS[1]),
-    temp: "hot",
-    size: "regular",
-    qty: 2,
-  };
-  const americano: OptionDraft = {
-    ...newDraft(MENU_ITEMS[0]),
-    temp: "ice",
-    size: "large",
-    ice: "less",
-  };
-  const cake = newDraft(findMenuItem("치즈케이크")!);
-  return [latte, americano, cake].map(toCartLine);
-}
-
 export const useKioskStore = create<KioskStore>((set, get) => ({
   ...INITIAL,
 
@@ -183,15 +165,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
       get().reset();
       return;
     }
-    const { cart, draft } = get();
     const patch: Partial<KioskState> = {};
-    if (screen === "option" && !draft) {
-      patch.draft = newDraft(MENU_ITEMS[1]);
-      patch.editIndex = -1;
-    }
-    if (["cart", "point", "pay", "done"].includes(screen) && !cart.length) {
-      patch.cart = seedCart();
-    }
     if (screen === "done") patch.orderNo = 127;
     get().go(screen, patch);
   },
@@ -358,7 +332,12 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     const localNo = 100 + Math.floor(Math.random() * 900);
     if (!isActionApiEnabled() || !pay) {
       // 서버를 안 쓰면 이전처럼 임시 번호로 완료 화면을 보여 준다.
-      get().go("done", { receipt, orderNo: localNo, orderNumber: null });
+      get().go("done", {
+        receipt,
+        orderNo: localNo,
+        orderNumber: null,
+        cart: [],
+      });
       return;
     }
     set({ ordering: true });
@@ -684,6 +663,7 @@ async function submitOrder(
     stampFailed,
     ordering: false,
     phone: "", // 적립이 끝났으니 전화번호는 화면 상태에서 지운다
+    cart: [], // 주문 완료 시 장바구니도 함께 비운다
   });
 }
 
