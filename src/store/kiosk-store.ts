@@ -131,24 +131,6 @@ const INITIAL: KioskState = {
   recommended: null,
 };
 
-/** 데모용 시드 장바구니 — 단계 이동 버튼으로 중간 화면을 바로 볼 때 채운다. */
-function seedCart(): CartLine[] {
-  const latte: OptionDraft = {
-    ...newDraft(MENU_ITEMS[1]),
-    temp: "hot",
-    size: "regular",
-    qty: 2,
-  };
-  const americano: OptionDraft = {
-    ...newDraft(MENU_ITEMS[0]),
-    temp: "ice",
-    size: "large",
-    ice: "less",
-  };
-  const cake = newDraft(findMenuItem("치즈케이크")!);
-  return [latte, americano, cake].map(toCartLine);
-}
-
 export const useKioskStore = create<KioskStore>((set, get) => ({
   ...INITIAL,
 
@@ -166,15 +148,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
       get().reset();
       return;
     }
-    const { cart, draft } = get();
     const patch: Partial<KioskState> = {};
-    if (screen === "option" && !draft) {
-      patch.draft = newDraft(MENU_ITEMS[1]);
-      patch.editIndex = -1;
-    }
-    if (["cart", "point", "pay", "done"].includes(screen) && !cart.length) {
-      patch.cart = seedCart();
-    }
     if (screen === "done") patch.orderNo = 127;
     get().go(screen, patch);
   },
@@ -339,6 +313,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     get().go("done", {
       receipt,
       orderNo: 100 + Math.floor(Math.random() * 900),
+      cart: [],
     }),
 
   callStaff: () => set({ staff: "called" }),
