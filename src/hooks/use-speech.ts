@@ -5,7 +5,7 @@ import { spokenText, staffTexts } from "@/lib/dialog";
 import { SpeechSession } from "@/lib/speech-session";
 import { useKioskStore } from "@/store/kiosk-store";
 
-/** 음성 모드에서는 안내가 끝날 때마다 다음 발화를 자동으로 기다린다. */
+/** 모든 모드에서 안내가 끝날 때마다 다음 발화를 자동으로 기다린다. */
 export function useSpeech({
   alwaysSpeak = false,
 }: { alwaysSpeak?: boolean } = {}) {
@@ -45,7 +45,7 @@ export function useSpeech({
     const sync = () => {
       const state = useKioskStore.getState();
       controller.update({
-        automatic: state.mode === "voice",
+        automatic: true,
         speak: state.mode === "voice" || alwaysSpeak,
         text: state.staff
           ? staffTexts(state.staff).join(". ")

@@ -620,7 +620,14 @@ function completeVoiceOrder(
     return;
   }
   store.addDraftToCart(draft);
-  checkoutByVoice(useKioskStore.getState(), pay);
+
+  // 발화에 결제 수단까지 함께 말한 경우에만 바로 결제로 이동하고,
+  // 그렇지 않으면 장바구니 화면으로 이동해 담은 메뉴를 먼저 확인시켜 준다.
+  if (pay) {
+    checkoutByVoice(useKioskStore.getState(), pay);
+  } else {
+    useKioskStore.getState().go("cart");
+  }
 }
 
 /**
@@ -674,8 +681,13 @@ function checkoutByVoice(store: KioskStore, pay: PayKey | null) {
     });
     return;
   }
-  if (pay) store.startPay(pay);
-  else store.go("pay", { pay: null });
+  if (pay) {
+    store.startPay(pay);
+  } else if (store.screen === "cart") {
+    store.go("point");
+  } else {
+    store.go("cart");
+  }
 }
 
 /** 파생값 셀렉터 */
