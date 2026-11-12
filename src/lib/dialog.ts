@@ -26,6 +26,8 @@ export interface DialogState {
   say: string | null;
   pay: PayKey | null;
   orderNo: number;
+  /** 서버가 발급한 주문번호(예: "A042"). 없으면 orderNo(임시 번호)를 "N번"으로 읽는다. */
+  orderNumber?: string | null;
 }
 
 /** "아메리카노 ICE 라지 2잔, 치즈케이크 1개" */
@@ -66,8 +68,10 @@ export function bannerText(s: DialogState): string {
       return payingCopy(s.pay).title;
     case "receipt":
       return "결제가 완료됐어요. 영수증을 출력할까요?";
-    case "done":
-      return `주문번호 ${s.orderNo}번입니다. 화면 아래 왼쪽 배출구에서 진동벨을 가져가 주세요. 벨이 울리면 픽업대로 와 주세요.`;
+    case "done": {
+      const no = s.orderNumber ?? `${s.orderNo}번`;
+      return `주문번호 ${no}입니다. 화면 아래 왼쪽 배출구에서 진동벨을 가져가 주세요. 벨이 울리면 픽업대로 와 주세요.`;
+    }
   }
 }
 

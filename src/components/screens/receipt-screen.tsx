@@ -60,8 +60,12 @@ export function DoneScreen() {
   const stamp = useKioskStore((s) => s.stamp);
 
   const notes = [
-    receipt ? "영수증이 출력됐어요" : "영수증 미출력",
-    ...(orderFailed ? ["주문 저장에 실패했어요 · 직원에게 알려 주세요"] : []),
+    // 주문 저장에 실패했으면 영수증 안내는 숨기고 실패 안내만 보여 준다.
+    orderFailed
+      ? "주문 저장에 실패했어요 · 직원에게 알려 주세요"
+      : receipt
+        ? "영수증이 출력됐어요"
+        : "영수증 미출력",
     ...(stamp
       ? [
           stampFailed
