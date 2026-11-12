@@ -25,6 +25,7 @@ import {
   recommendationFor,
 } from "@/lib/intent";
 import { josa, squash } from "@/lib/korean";
+import { addStamps, createOrder } from "@/lib/order-api";
 import {
   cartTotal,
   missingOption,
@@ -42,6 +43,9 @@ export const FAIL_LIMIT = 2;
 
 /** 발화마다 올리는 번호. 더 새로운 발화/리셋이 생기면 이전 서버 응답은 버린다. */
 let utteranceSeq = 0;
+
+/** 주문 저장 요청마다 올리는 번호. 그 사이 리셋되면 이전 요청의 결과는 버린다. */
+let orderSeq = 0;
 
 export interface KioskState {
   screen: ScreenKey;
@@ -65,6 +69,14 @@ export interface KioskState {
   /** 필수 옵션을 더 물어보는 동안 기억하는 음성 결제 수단 */
   pendingPay: PayKey | null;
   orderNo: number;
+  /** 서버가 발급한 주문번호(예: "A042"). 서버를 안 쓰거나 저장에 실패하면 null이고 orderNo(임시 번호)를 보여 준다. */
+  orderNumber: string | null;
+  /** 주문 저장·스탬프 적립 요청 중 (영수증 버튼 중복 클릭 방지) */
+  ordering: boolean;
+  /** 주문 저장 실패 — 완료 화면에서 직원 안내를 보여 준다 */
+  orderFailed: boolean;
+  /** 스탬프 적립 실패 */
+  stampFailed: boolean;
   receipt: boolean;
   stamp: number;
   /** 추천 배지를 달 메뉴 이름 */
@@ -126,6 +138,10 @@ const INITIAL: KioskState = {
   pay: null,
   pendingPay: null,
   orderNo: 0,
+  orderNumber: null,
+  ordering: false,
+  orderFailed: false,
+  stampFailed: false,
   receipt: false,
   stamp: 0,
   recommended: null,
@@ -158,6 +174,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
 
   reset: () => {
     utteranceSeq++; // 진행 중인 서버 응답은 버린다
+    orderSeq++; // 진행 중인 주문 저장 결과도 버린다
     set({ ...INITIAL, mode: get().mode, voicePaused: get().voicePaused });
   },
 
@@ -335,11 +352,18 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     set({ say: "결제를 취소했어요. 결제 수단을 다시 골라 주세요." });
   },
 
-  finish: (receipt) =>
-    get().go("done", {
-      receipt,
-      orderNo: 100 + Math.floor(Math.random() * 900),
-    }),
+  finish: (receipt) => {
+    if (get().ordering) return;
+    const { pay } = get();
+    const localNo = 100 + Math.floor(Math.random() * 900);
+    if (!isActionApiEnabled() || !pay) {
+      // 서버를 안 쓰면 이전처럼 임시 번호로 완료 화면을 보여 준다.
+      get().go("done", { receipt, orderNo: localNo, orderNumber: null });
+      return;
+    }
+    set({ ordering: true });
+    void submitOrder(receipt, pay, localNo, ++orderSeq);
+  },
 
   callStaff: () => set({ staff: "called" }),
   closeStaff: () => set({ staff: null }),
@@ -618,6 +642,49 @@ function completeVoiceOrder(
   }
   store.addDraftToCart(draft);
   checkoutByVoice(useKioskStore.getState(), pay);
+}
+
+/**
+ * 영수증 선택 뒤: 주문을 서버에 저장하고(주문번호 발급) 스탬프를 적립한 다음 완료 화면으로 간다.
+ * 서버가 실패해도 완료 화면은 보여 주되 orderFailed/stampFailed로 직원 안내를 띄운다.
+ */
+async function submitOrder(
+  receipt: boolean,
+  pay: PayKey,
+  localNo: number,
+  seq: number,
+) {
+  const { cart, phone, stamp } = useKioskStore.getState();
+  const order = await createOrder(cart, pay, receipt);
+  if (seq !== orderSeq) return; // 그 사이 처음으로 돌아갔다
+
+  let stampFailed = false;
+  if (phone && stamp > 0) {
+    if (order.kind === "ok") {
+      const result = await addStamps(phone, stamp);
+      if (seq !== orderSeq) return;
+      stampFailed = result.kind === "fail";
+    } else {
+      stampFailed = true;
+    }
+  }
+
+  if (order.kind === "ok" && order.total !== null) {
+    if (order.total !== cartTotal(cart)) {
+      console.warn("서버 계산 총액이 화면 합계와 다릅니다", order.total);
+    }
+  }
+  const serverNo =
+    order.kind === "ok" ? Number(order.orderNumber.replace(/\D/g, "")) : 0;
+  useKioskStore.getState().go("done", {
+    receipt,
+    orderNo: serverNo > 0 ? serverNo : localNo,
+    orderNumber: order.kind === "ok" ? order.orderNumber : null,
+    orderFailed: order.kind === "fail",
+    stampFailed,
+    ordering: false,
+    phone: "", // 적립이 끝났으니 전화번호는 화면 상태에서 지운다
+  });
 }
 
 function checkoutByVoice(store: KioskStore, pay: PayKey | null) {
