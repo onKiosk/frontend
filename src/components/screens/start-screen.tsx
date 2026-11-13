@@ -4,12 +4,7 @@ import { MODES } from "@/data/menu";
 import { useKioskStore } from "@/store/kiosk-store";
 import { SelectButton } from "@/components/ui/select-button";
 
-export function StartScreen({
-  onToggleListen,
-}: {
-  onToggleListen: () => void;
-}) {
-  const listening = useKioskStore((s) => s.listening);
+export function StartScreen() {
   const transcript = useKioskStore((s) => s.transcript);
   const say = useKioskStore((s) => s.say);
 
@@ -23,19 +18,6 @@ export function StartScreen({
           편한 방법을 골라 주세요
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onToggleListen}
-        aria-pressed={listening}
-        className="h-[8.5em] w-[8.5em] rounded-full border-none text-[1.2em] font-bold leading-[1.3] text-(--k-ink-fg)"
-        style={{
-          background: listening ? "var(--k-red)" : "var(--k-ink)",
-          animation: listening ? "kpulse 1.2s infinite" : "none",
-        }}
-      >
-        {listening ? "듣고 있어요…" : "눌러서 말하기"}
-      </button>
 
       <div className="min-h-[1.4em] text-[1em] font-bold">
         {transcript ? `“${transcript}”` : (say ?? "")}
@@ -54,14 +36,21 @@ export function StartFooter() {
   const mode = useKioskStore((s) => s.mode);
   const setMode = useKioskStore((s) => s.setMode);
 
+  // '음성 모드' 제외하고 나머지 3개 모드만 필터링
+  const visibleModes = MODES.filter(
+    (m) => m.key !== "voice" && !m.label.includes("음성"),
+  );
+
   return (
     <div className="grid grid-cols-2 gap-[0.55em]">
-      {MODES.map((m) => (
+      {visibleModes.map((m, idx) => (
         <SelectButton
           key={m.key}
           selected={mode === m.key}
           onClick={() => setMode(m.key)}
-          className="flex min-h-[4.6em] flex-col items-center justify-center gap-[0.15em] rounded-[1em] text-[1.02em]"
+          className={`flex min-h-[4.6em] flex-col items-center justify-center gap-[0.15em] rounded-[1em] text-[1.02em] ${
+            idx === 2 ? "col-span-2" : ""
+          }`}
         >
           <span>{m.label}</span>
           <span className="text-[0.72em] font-semibold opacity-85">

@@ -8,6 +8,7 @@ import { SlotMarker } from "@/components/screens/pay-screen";
 
 export function ReceiptScreen() {
   const cart = useKioskStore((s) => s.cart);
+  const ordering = useKioskStore((s) => s.ordering);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[0.7em] p-[1.5em] text-center">
@@ -17,20 +18,31 @@ export function ReceiptScreen() {
       <div className="text-[2em] font-bold tracking-[-0.02em]">
         영수증을 출력할까요?
       </div>
+      {ordering && (
+        <div className="text-[0.9em] font-semibold text-(--k-sub)">
+          주문을 저장하고 있어요…
+        </div>
+      )}
     </div>
   );
 }
 
 export function ReceiptFooter() {
   const finish = useKioskStore((s) => s.finish);
+  const ordering = useKioskStore((s) => s.ordering);
   return (
     <div className="flex gap-[0.55em]">
-      <ActionButton className="flex-1" onClick={() => finish(false)}>
+      <ActionButton
+        className="flex-1"
+        disabled={ordering}
+        onClick={() => finish(false)}
+      >
         출력 안 함
       </ActionButton>
       <ActionButton
         variant="primary"
         className="flex-1"
+        disabled={ordering}
         onClick={() => finish(true)}
       >
         영수증 출력
@@ -41,12 +53,26 @@ export function ReceiptFooter() {
 
 export function DoneScreen() {
   const orderNo = useKioskStore((s) => s.orderNo);
+  const orderNumber = useKioskStore((s) => s.orderNumber);
+  const orderFailed = useKioskStore((s) => s.orderFailed);
+  const stampFailed = useKioskStore((s) => s.stampFailed);
   const receipt = useKioskStore((s) => s.receipt);
   const stamp = useKioskStore((s) => s.stamp);
 
   const notes = [
-    receipt ? "영수증이 출력됐어요" : "영수증 미출력",
-    ...(stamp ? [`스탬프 ${stamp}개 적립`] : []),
+    // 주문 저장에 실패했으면 영수증 안내는 숨기고 실패 안내만 보여 준다.
+    orderFailed
+      ? "주문 저장에 실패했어요 · 직원에게 알려 주세요"
+      : receipt
+        ? "영수증이 출력됐어요"
+        : "영수증 미출력",
+    ...(stamp
+      ? [
+          stampFailed
+            ? "스탬프 적립에 실패했어요 · 직원에게 문의해 주세요"
+            : `스탬프 ${stamp}개 적립`,
+        ]
+      : []),
   ];
 
   return (
@@ -57,7 +83,7 @@ export function DoneScreen() {
         </div>
         <div className="text-[0.95em] font-bold">주문번호</div>
         <div className="text-[5.5em] font-bold leading-none tracking-[-0.03em]">
-          {orderNo}
+          {orderNumber ?? orderNo}
         </div>
         <div className="mt-[0.4em] text-[1.3em] font-bold">
           진동벨을 가져가 주세요
