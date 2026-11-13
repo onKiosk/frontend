@@ -9,9 +9,9 @@ const state = () => useKioskStore.getState();
 const say = (text) => state().handleUtterance(text);
 beforeEach(() => state().reset());
 
-test("메뉴와 필수 옵션을 말하면 가격·옵션·수량을 담고 결제 수단을 묻는다", () => {
+test("메뉴와 필수 옵션을 말하면 가격·옵션·수량을 담고 장바구니로 이동한다", () => {
   say("아이스 아메리카노 라지 두 잔 얼음 적게 샷 추가");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().pay, null);
   assert.equal(state().cart.length, 1);
   assert.equal(state().cart[0].qty, 2);
@@ -40,7 +40,7 @@ for (const [spoken, key] of [
   });
 }
 
-test("필수 옵션을 순서대로 묻고 마지막 답변에서 바로 결제로 이동한다", () => {
+test("필수 옵션을 순서대로 묻고 마지막 답변에서 장바구니로 이동한다", () => {
   say("아메리카노 주세요");
   assert.equal(state().screen, "option");
   assert.match(bannerText(state()), /따뜻/);
@@ -49,7 +49,7 @@ test("필수 옵션을 순서대로 묻고 마지막 답변에서 바로 결제�
   assert.match(bannerText(state()), /사이즈/);
   assert.equal(state().cart.length, 0);
   say("레귤러 두 잔");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].qty, 2);
 });
 
@@ -90,14 +90,14 @@ test("옵션 화면을 나가면 기억한 결제 수단을 버린다", () => {
   say("아메리카노 카드로");
   say("뒤로");
   say("카페라떼 핫 레귤러");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().pay, null);
 });
 
 test("다른 메뉴로 바꾸면 이전 옵션과 결제 수단을 물려받지 않는다", () => {
   say("아메리카노 핫 카드로");
   say("카페라떼 아이스 레귤러");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].name, "카페라떼");
   assert.equal(state().cart[0].draft.temp, "ice");
   assert.equal(state().pay, null);
@@ -112,7 +112,7 @@ test("음료와 달리 디저트는 온도·사이즈 없이 수량을 담는다
 
 test("아이스 전용 메뉴는 사이즈만 정하면 담는다", () => {
   say("자몽에이드 라지");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].draft.temp, "ice");
 });
 
@@ -125,10 +125,10 @@ test("품절 메뉴와 결제 수단을 같이 말해도 결제하지 않는다"
   assert.equal(state().pay, null);
 });
 
-test("결제 선택 화면에서 메뉴를 추가하고 결제할 수 있다", () => {
+test("장바구니 및 결제 선택 화면에서 메뉴를 추가하고 결제할 수 있다", () => {
   say("아이스 아메리카노 라지");
   say("치즈케이크 두 개");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "cart");
   assert.equal(state().cart.length, 2);
   say("네이버페이로 할게요");
   assert.equal(state().screen, "paying");
@@ -143,11 +143,11 @@ test("장바구니 화면에서 메뉴가 포함된 주문을 결제 명령으�
   assert.equal(state().cart.length, 2);
 });
 
-test("음성으로 장바구니를 확인하면 결제 수단으로, 수단을 말하면 결제 대기로 간다", () => {
+test("음성으로 장바구니를 확인하면 적립 화면으로, 수단을 말하면 결제 대기로 간다", () => {
   say("치즈케이크 하나");
   state().go("cart");
   say("네 맞아요");
-  assert.equal(state().screen, "pay");
+  assert.equal(state().screen, "point");
   state().go("cart");
   say("카드로 할게요");
   assert.equal(state().screen, "paying");
@@ -209,9 +209,10 @@ test("기존 메뉴 수정은 교체하고 다른 메뉴 주문은 별도 줄로
   assert.equal(state().cart[0].name, "아메리카노");
 });
 
-test("음성 주문 후에도 적립을 선택하고 결제 수단을 함께 말할 수 있다", () => {
+test("음성 주문 후 장바구니에서 적립을 선택하고 결제 수단을 함께 말할 수 있다", () => {
   say("아메리카노 핫 레귤러 두 잔");
-  say("적립할게요");
+  assert.equal(state().screen, "cart");
+  say("네 맞아요");
   assert.equal(state().screen, "point");
   say("1234 카드로 할게요");
   assert.equal(state().screen, "paying");
