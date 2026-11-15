@@ -165,8 +165,8 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
       get().reset();
       return;
     }
+    if (screen === "done") return;
     const patch: Partial<KioskState> = {};
-    if (screen === "done") patch.orderNo = 127;
     get().go(screen, patch);
   },
 

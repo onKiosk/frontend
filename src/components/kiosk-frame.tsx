@@ -27,10 +27,11 @@ import { StartFooter, StartScreen } from "@/components/screens/start-screen";
 interface Props {
   scale: number;
   onToggleListen: () => void;
+  onRetryListen: () => void;
 }
 
 /** 540×960 키오스크 화면 한 대. */
-export function KioskFrame({ scale, onToggleListen }: Props) {
+export function KioskFrame({ scale, onToggleListen, onRetryListen }: Props) {
   const mode = useKioskStore((s) => s.mode);
   const go = useKioskStore((s) => s.go);
   const callStaff = useKioskStore((s) => s.callStaff);
@@ -101,7 +102,7 @@ export function KioskFrame({ scale, onToggleListen }: Props) {
         </button>
       </div>
 
-      <StaffModal onRetryVoice={onToggleListen} />
+      <StaffModal onRetryVoice={onRetryListen} />
     </div>
   );
 }
