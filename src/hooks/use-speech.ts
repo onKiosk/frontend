@@ -75,5 +75,6 @@ export function useSpeech({
   }, [alwaysSpeak]);
 
   const toggleListen = useCallback(() => session.current?.toggle(), []);
-  return { toggleListen };
+  const retryListen = useCallback(() => session.current?.retry(), []);
+  return { toggleListen, retryListen };
 }

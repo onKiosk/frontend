@@ -13,7 +13,7 @@ export function StepNav() {
       aria-label="데모 단계 이동"
       className="flex flex-wrap justify-center gap-1.5"
     >
-      {STEPS.map(({ key, label }) => {
+      {STEPS.filter(({ key }) => key !== "done").map(({ key, label }) => {
         const active =
           screen === key ||
           (key === "pay" && ["paying", "receipt"].includes(screen));

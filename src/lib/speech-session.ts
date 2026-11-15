@@ -74,6 +74,16 @@ export class SpeechSession {
     this.startListening();
   }
 
+  retry() {
+    if (this.disposed) return;
+    this.paused = false;
+    this.blocked = false;
+    this.errors = 0;
+    this.options.onPaused(false);
+    this.stop();
+    this.startListening();
+  }
+
   setVisible(visible: boolean) {
     if (this.disposed || visible === this.visible) return;
     this.visible = visible;

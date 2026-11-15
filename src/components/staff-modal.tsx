@@ -32,7 +32,10 @@ export function StaffModal({ onRetryVoice }: { onRetryVoice: () => void }) {
           <div className="flex gap-[0.55em]">
             <ActionButton
               className="flex-1 text-[1.05em]"
-              onClick={onRetryVoice}
+              onClick={() => {
+                closeStaff();
+                onRetryVoice();
+              }}
             >
               다시 말하기
             </ActionButton>
