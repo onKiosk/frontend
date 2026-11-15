@@ -369,6 +369,7 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
  * - 결제 대기 중: 결제 취소만 받으면 되므로 로컬
  * - 적립 화면의 숫자 발화: 전화번호를 LLM/로그로 보내지 않는다(개인정보 정책)
  * - 옵션 화면(draft 진행 중): 데이터셋에 draft 키가 없으므로 기존 규칙으로 이어서 처리
+ * - 장바구니 화면에서 "더 담을게" 등 추가 주문 의도: 서버 Action 밖의 명령이므로 로컬
  * - 이전/뒤로/처음/기본 모드: 서버 Action 밖의 명령
  */
 function shouldAskServer(s: KioskState, raw: string): boolean {
@@ -377,6 +378,7 @@ function shouldAskServer(s: KioskState, raw: string): boolean {
   if (s.screen === "paying") return false;
   if (s.screen === "point" && /\d/.test(said)) return false;
   if (s.screen === "option" && s.draft) return false;
+  if (s.screen === "cart" && /더/.test(said) && !matchItem(said)) return false;
   if (/이전|뒤로|처음|기본모드/.test(said)) return false;
   return true;
 }
