@@ -272,15 +272,11 @@ export class SpeechSession {
     };
 
     try {
-      this.cancelSpeech = this.options.speak(
-        textToSpeak,
-        done,
-        (charIndex) => {
-          if (generation === this.generation) {
-            this.lastCharIndex = charIndex;
-          }
-        },
-      );
+      this.cancelSpeech = this.options.speak(textToSpeak, done, (charIndex) => {
+        if (generation === this.generation) {
+          this.lastCharIndex = charIndex;
+        }
+      });
     } catch {
       done();
     }
