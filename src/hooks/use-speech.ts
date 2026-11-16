@@ -7,7 +7,7 @@ import { useKioskStore } from "@/store/kiosk-store";
 
 /** 모든 모드에서 안내가 끝날 때마다 다음 발화를 자동으로 기다린다. */
 export function useSpeech({
-  alwaysSpeak = false,
+  alwaysSpeak = true,
 }: { alwaysSpeak?: boolean } = {}) {
   const session = useRef<SpeechSession | null>(null);
 

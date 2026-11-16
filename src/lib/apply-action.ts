@@ -139,6 +139,18 @@ const listWithJosa = (names: string[]) =>
   [...names.slice(0, -1), josa(names[names.length - 1], "을", "를")].join(", ");
 
 /**
+ * 필수 옵션(온도·사이즈)은 다 말했지만 추가 옵션(샷·시럽 등)은 아직 말하지 않은 음료.
+ * 이런 주문은 바로 담지 않고 옵션 화면에서 추가 옵션을 한 번 안내한다(터치 주문과 같은 흐름).
+ */
+function needsExtrasStep(draft: OptionDraft): boolean {
+  return (
+    !draft.item.dessert &&
+    extrasFor(draft.item).length > 0 &&
+    !Object.values(draft.extras).some(Boolean)
+  );
+}
+
+/**
  * 서버 Action 1건을 화면 상태 변경으로 바꾼다.
  * @param store  getState()로 얻은 현재 스토어(액션 함수 포함)
  * @param patch  useKioskStore.setState
@@ -159,7 +171,11 @@ export function applyAction(
       if (drafts.some((d) => d === null)) return "unsupported";
       patch({ editIndex: -1 }); // 장바구니 수정 중이었어도 새로 담는다
       for (const draft of drafts as OptionDraft[]) {
-        if (missingOption(draft)) {
+        // 한 문장에 메뉴를 여러 개 말했다면 기존처럼 바로 담는다(옵션 화면은 한 메뉴씩).
+        if (
+          missingOption(draft) ||
+          (drafts.length === 1 && needsExtrasStep(draft))
+        ) {
           store.go("option", { draft, editIndex: -1 });
           return "handled";
         }
@@ -176,8 +192,8 @@ export function applyAction(
         { ...newDraft(item), qty: parseQty(heard) },
         heard,
       );
-      if (missingOption(draft)) {
-        store.go("option", { draft, editIndex: -1 }); // 안내 문구가 빠진 옵션을 되묻는다
+      if (missingOption(draft) || needsExtrasStep(draft)) {
+        store.go("option", { draft, editIndex: -1 }); // 빠진 필수 옵션을 되묻거나, 추가 옵션을 안내한다
       } else {
         patch({ editIndex: -1 });
         store.addDraftToCart(draft);

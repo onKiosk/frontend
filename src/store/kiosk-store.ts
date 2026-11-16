@@ -27,7 +27,9 @@ import {
 import { josa, squash } from "@/lib/korean";
 import { addStamps, createOrder } from "@/lib/order-api";
 import {
+  cartCount,
   cartTotal,
+  extrasFor,
   missingOption,
   newDraft,
   optionText,
@@ -37,6 +39,20 @@ import {
   type CartLine,
   type OptionDraft,
 } from "@/lib/pricing";
+
+const CONFIRM_WORDS = /담아|없어|괜찮|됐어|그대로|이대로|결제/;
+
+/**
+ * 필수 옵션(온도·사이즈)은 다 말했지만 추가 옵션(샷·시럽 등)은 아직 말하지 않은 음료.
+ * 바로 담지 않고 옵션 화면에서 추가 옵션을 한 번 안내한다(터치 주문과 같은 흐름).
+ */
+function needsExtrasStep(draft: OptionDraft): boolean {
+  return (
+    !draft.item.dessert &&
+    extrasFor(draft.item).length > 0 &&
+    !Object.values(draft.extras).some(Boolean)
+  );
+}
 
 /** 음성을 이만큼 연속으로 못 알아들으면 직원 호출을 제안한다. */
 export const FAIL_LIMIT = 2;
@@ -243,10 +259,9 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     }
 
     const changed = state.editIndex >= 0;
-    const opt = line.opt ? ` ${line.opt.split(" · ").join(" ")}` : "";
     get().go("menu", { cart, cat: draft.item.cat, draft: null, editIndex: -1 });
     set({
-      say: `${line.name}${opt} ${line.qty}${unitWord(draft.item)} ${
+      say: `총 ${cartCount(cart)}잔 ${
         changed ? "으로 바꿨어요" : "담았어요"
       }. 더 필요하신 게 있나요?`,
     });
@@ -476,9 +491,21 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       orderByVoice(store, item, said);
       return true;
     }
+    const wasMissing = missingOption(store.draft);
     const { draft, hits } = applyOptionSpeech(store.draft, said);
     const pay = matchPay(said);
-    if (hits || pay || /담아|없어|괜찮|됐어|그대로|이대로|결제/.test(said)) {
+    const confirmWords = CONFIRM_WORDS.test(said);
+    if (hits || pay || confirmWords) {
+      if (
+        wasMissing !== null &&
+        missingOption(draft) === null &&
+        needsExtrasStep(draft) &&
+        !confirmWords &&
+        !pay
+      ) {
+        useKioskStore.setState({ draft, say: null });
+        return true;
+      }
       completeVoiceOrder(store, draft, pay ?? store.pendingPay);
       return true;
     }
@@ -604,7 +631,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   return false;
 }
 
-/** 말로 메뉴를 주문했을 때 — 옵션까지 다 말했으면 바로 담는다. */
+/** 말로 메뉴를 주문했을 때 — 필수·추가 옵션까지 다 말했으면 바로 담는다. */
 function orderByVoice(store: KioskStore, item: MenuItem, said: string) {
   if (item.soldout) {
     store.tapItem(item);
@@ -612,9 +639,20 @@ function orderByVoice(store: KioskStore, item: MenuItem, said: string) {
   }
   const base: OptionDraft = { ...newDraft(item), qty: parseQty(said) };
   const { draft } = applyOptionSpeech(base, said);
+  const pay = matchPay(said);
+  const confirmWords = CONFIRM_WORDS.test(said);
   // 새 메뉴는 기존 장바구니 수정 상태를 이어받지 않는다.
   store.go("option", { draft, editIndex: -1 });
-  completeVoiceOrder(useKioskStore.getState(), draft, matchPay(said));
+  if (
+    !missingOption(draft) &&
+    needsExtrasStep(draft) &&
+    !confirmWords &&
+    !pay
+  ) {
+    useKioskStore.setState({ draft, pendingPay: null, say: null });
+    return;
+  }
+  completeVoiceOrder(useKioskStore.getState(), draft, pay);
 }
 
 function completeVoiceOrder(

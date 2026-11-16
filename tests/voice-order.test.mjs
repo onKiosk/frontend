@@ -49,6 +49,9 @@ test("필수 옵션을 순서대로 묻고 마지막 답변에서 장바구니�
   assert.match(bannerText(state()), /사이즈/);
   assert.equal(state().cart.length, 0);
   say("레귤러 두 잔");
+  assert.equal(state().screen, "option");
+  assert.match(bannerText(state()), /추가 옵션/);
+  say("담아 주세요");
   assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].qty, 2);
 });
@@ -75,6 +78,7 @@ test("필수 옵션이 없으면 담아 달라고 해도 결제하지 않는다"
   assert.equal(state().cart.length, 0);
   assert.equal(state().pendingPay, "kakao");
   say("따뜻한 레귤러");
+  say("담아 주세요");
   assert.equal(state().screen, "paying");
   assert.equal(state().pay, "kakao");
 });
@@ -90,6 +94,7 @@ test("옵션 화면을 나가면 기억한 결제 수단을 버린다", () => {
   say("아메리카노 카드로");
   say("뒤로");
   say("카페라떼 핫 레귤러");
+  say("담아 주세요");
   assert.equal(state().screen, "cart");
   assert.equal(state().pay, null);
 });
@@ -97,6 +102,7 @@ test("옵션 화면을 나가면 기억한 결제 수단을 버린다", () => {
 test("다른 메뉴로 바꾸면 이전 옵션과 결제 수단을 물려받지 않는다", () => {
   say("아메리카노 핫 카드로");
   say("카페라떼 아이스 레귤러");
+  say("담아 주세요");
   assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].name, "카페라떼");
   assert.equal(state().cart[0].draft.temp, "ice");
@@ -112,6 +118,7 @@ test("음료와 달리 디저트는 온도·사이즈 없이 수량을 담는다
 
 test("아이스 전용 메뉴는 사이즈만 정하면 담는다", () => {
   say("자몽에이드 라지");
+  say("담아 주세요");
   assert.equal(state().screen, "cart");
   assert.equal(state().cart[0].draft.temp, "ice");
 });
@@ -127,6 +134,7 @@ test("품절 메뉴와 결제 수단을 같이 말해도 결제하지 않는다"
 
 test("장바구니 및 결제 선택 화면에서 메뉴를 추가하고 결제할 수 있다", () => {
   say("아이스 아메리카노 라지");
+  say("담아 주세요");
   say("치즈케이크 두 개");
   assert.equal(state().screen, "cart");
   assert.equal(state().cart.length, 2);
@@ -199,18 +207,21 @@ test("터치로 메뉴·옵션·장바구니·적립·결제를 진행하는 흐
 
 test("기존 메뉴 수정은 교체하고 다른 메뉴 주문은 별도 줄로 담는다", () => {
   say("아메리카노 핫 레귤러");
+  say("담아 주세요");
   state().editLine(0);
   say("아이스 라지 두 잔");
   assert.equal(state().cart.length, 1);
   assert.equal(state().cart[0].qty, 2);
   state().editLine(0);
   say("카페라떼 핫 레귤러");
+  say("담아 주세요");
   assert.equal(state().cart.length, 2);
   assert.equal(state().cart[0].name, "아메리카노");
 });
 
 test("음성 주문 후 장바구니에서 적립을 선택하고 결제 수단을 함께 말할 수 있다", () => {
   say("아메리카노 핫 레귤러 두 잔");
+  say("담아 주세요");
   assert.equal(state().screen, "cart");
   say("네 맞아요");
   assert.equal(state().screen, "point");
@@ -230,6 +241,7 @@ test("결제 수단에 맞는 단말 안내를 제공한다", () => {
 
 test("적립하지 않는다는 말을 결제 거절로 오해하지 않는다", () => {
   say("아메리카노 핫 레귤러");
+  say("담아 주세요");
   state().go("point");
   say("적립 안 할게요 카드로 할게요");
   assert.equal(state().screen, "paying");
