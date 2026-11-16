@@ -6,7 +6,7 @@ export interface SpeechSessionOptions {
     done: () => void,
     onBoundary?: (charIndex: number) => void,
   ) => () => void;
-  onSpeaking: (speaking: boolean) => void;
+  onSpeaking?: (speaking: boolean) => void;
   onListening: (listening: boolean) => void;
   onPaused: (paused: boolean) => void;
   onTranscript: (text: string) => void;
@@ -197,7 +197,7 @@ export class SpeechSession {
   private setSpeaking(value: boolean) {
     if (this.speaking !== value) {
       this.speaking = value;
-      this.options.onSpeaking(value);
+      this.options.onSpeaking?.(value);
     }
   }
 
