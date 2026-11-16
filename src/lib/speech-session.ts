@@ -1,7 +1,12 @@
 export interface SpeechSessionOptions {
   createRecognition: () => SpeechRecognition | null;
   /** 안내를 재생하고, 종료 시 done을 호출한다. 반환 함수는 재생을 취소한다. */
-  speak: (text: string, done: () => void) => () => void;
+  speak: (
+    text: string,
+    done: () => void,
+    onBoundary?: (charIndex: number) => void,
+  ) => () => void;
+  onSpeaking?: (speaking: boolean) => void;
   onListening: (listening: boolean) => void;
   onPaused: (paused: boolean) => void;
   onTranscript: (text: string) => void;
@@ -36,6 +41,11 @@ export class SpeechSession {
   private disposed = false;
   private errors = 0;
 
+  // 이어 듣기를 위한 현재 재생 위치 추적
+  private currentText = "";
+  private spokenOffset = 0;
+  private lastCharIndex = 0;
+
   private options: SpeechSessionOptions;
 
   constructor(options: SpeechSessionOptions) {
@@ -63,8 +73,62 @@ export class SpeechSession {
       return;
     }
 
+    // 새로운 안내 문구로 바뀌면 재생 위치 초기화
+    this.spokenOffset = 0;
+    this.lastCharIndex = 0;
+
     this.stop();
-    this.guide();
+    this.guide(0);
+  }
+
+  /**
+   * [음성 멈춤] <-> [다시 듣기] 통합 토글 버튼 핸들러
+   * 1) 안내 음성 재생 중(speaking === true) -> 음성 멈춤 후 즉시 사용자 음성인식 시작
+   * 2) 안내 음성 멈춤 상태(speaking === false) -> STT 끄고 멈췄던 지점부터 안내 음성 이어서 재생
+   */
+  toggleGuidance() {
+    if (this.disposed || !this.visible) return;
+
+    if (this.speaking) {
+      // [음성 멈춤] 클릭: 현재까지 읽은 글자 위치 저장
+      this.spokenOffset = Math.min(
+        this.currentText.length,
+        this.spokenOffset + this.lastCharIndex,
+      );
+      this.lastCharIndex = 0;
+
+      this.paused = false;
+      this.blocked = false;
+      this.errors = 0;
+      this.options.onPaused(false);
+
+      // TTS 중단 후 즉시 사용자 음성인식 시작
+      this.stop();
+      this.startListening();
+    } else {
+      // [다시 듣기] 클릭: 사용자 음성인식 즉시 종료 후 멈춘 부분부터 안내 음성 재생
+      this.paused = false;
+      this.blocked = false;
+      this.errors = 0;
+      this.options.onPaused(false);
+
+      this.stop();
+
+      // 이미 끝까지 다 읽은 상태였다면 처음(0)부터 다시 재생
+      const startIndex =
+        this.spokenOffset >= this.guidance.text.length ? 0 : this.spokenOffset;
+      this.spokenOffset = startIndex;
+      this.lastCharIndex = 0;
+
+      // STT 엔진이 완전히 닫힌 뒤 TTS가 자기 음성을 인식하지 않도록 짧은 딜레이(100ms) 부여
+      const gen = this.generation;
+      this.timer = setTimeout(() => {
+        this.timer = null;
+        if (!this.disposed && gen === this.generation) {
+          this.guide(startIndex, true);
+        }
+      }, 100);
+    }
   }
 
   toggle() {
@@ -89,24 +153,15 @@ export class SpeechSession {
     this.startListening();
   }
 
-  /**
-   * 안내 음성을 즉시 중단하고
-   * 사용자 음성인식을 바로 시작한다.
-   */
   interruptAndListen() {
     if (this.disposed || !this.visible) return;
 
-    // 일시정지 및 오류 상태 해제
     this.paused = false;
     this.blocked = false;
     this.errors = 0;
 
     this.options.onPaused(false);
-
-    // 기존 안내 음성 및 음성인식 엔진 종료
     this.stop();
-
-    // 사용자 음성인식 즉시 시작
     this.startListening();
   }
 
@@ -130,13 +185,20 @@ export class SpeechSession {
     this.stop();
 
     if (visible) {
-      this.guide();
+      this.guide(this.spokenOffset);
     }
   }
 
   dispose() {
     this.disposed = true;
     this.stop();
+  }
+
+  private setSpeaking(value: boolean) {
+    if (this.speaking !== value) {
+      this.speaking = value;
+      this.options.onSpeaking?.(value);
+    }
   }
 
   private stop() {
@@ -147,7 +209,7 @@ export class SpeechSession {
     }
 
     this.timer = null;
-    this.speaking = false;
+    this.setSpeaking(false);
 
     const cancel = this.cancelSpeech;
     this.cancelSpeech = null;
@@ -176,31 +238,45 @@ export class SpeechSession {
     this.options.onListening(false);
   }
 
-  private guide() {
+  private guide(startIndex = 0, forceSpeak = false) {
     if (this.disposed || !this.visible || this.paused || this.blocked) {
       return;
     }
 
-    if (!this.guidance.speak || !this.guidance.text) {
+    const fullText = this.guidance.text;
+    const textToSpeak = fullText.slice(startIndex);
+
+    if ((!this.guidance.speak && !forceSpeak) || !textToSpeak.trim()) {
       this.schedule();
       return;
     }
 
     const generation = this.generation;
+    this.currentText = fullText;
+    this.spokenOffset = startIndex;
+    this.lastCharIndex = 0;
 
-    this.speaking = true;
+    this.setSpeaking(true);
 
     const done = () => {
       if (this.disposed || generation !== this.generation) {
         return;
       }
 
-      this.speaking = false;
+      // 끝까지 재생 완료 시 offset을 전체 길이로 기록 (이후 다시 듣기 누르면 처음부터 재생)
+      this.spokenOffset = fullText.length;
+      this.lastCharIndex = 0;
+
+      this.setSpeaking(false);
       this.schedule();
     };
 
     try {
-      this.cancelSpeech = this.options.speak(this.guidance.text, done);
+      this.cancelSpeech = this.options.speak(textToSpeak, done, (charIndex) => {
+        if (generation === this.generation) {
+          this.lastCharIndex = charIndex;
+        }
+      });
     } catch {
       done();
     }

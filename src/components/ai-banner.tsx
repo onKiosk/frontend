@@ -4,10 +4,11 @@ import { bannerText } from "@/lib/dialog";
 import { useDialogState, useKioskStore } from "@/store/kiosk-store";
 
 type AiBannerProps = {
-  onInterruptAndListen: () => void;
+  isSpeaking: boolean;
+  onToggleGuidance: () => void;
 };
 
-export function AiBanner({ onInterruptAndListen }: AiBannerProps) {
+export function AiBanner({ isSpeaking, onToggleGuidance }: AiBannerProps) {
   const dialog = useDialogState();
   const listening = useKioskStore((state) => state.listening);
   const transcript = useKioskStore((state) => state.transcript);
@@ -34,15 +35,27 @@ export function AiBanner({ onInterruptAndListen }: AiBannerProps) {
 
       <button
         type="button"
-        onClick={onInterruptAndListen}
-        aria-label="음성 안내를 멈추고 사용자 음성 듣기"
+        onClick={onToggleGuidance}
+        aria-label={
+          isSpeaking
+            ? "음성 안내를 멈추고 사용자 음성 듣기"
+            : "멈춘 부분부터 안내 음성 다시 듣기"
+        }
         className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-white bg-black text-center text-xs font-bold text-white transition hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-white/40 active:scale-95"
       >
-        <span className="leading-tight">
-          음성
-          <br />
-          멈춤
-        </span>
+        {isSpeaking ? (
+          <span className="leading-tight">
+            음성
+            <br />
+            멈춤
+          </span>
+        ) : (
+          <span className="leading-tight">
+            다시
+            <br />
+            듣기
+          </span>
+        )}
       </button>
     </section>
   );
