@@ -27,6 +27,7 @@ import {
 import { josa, squash } from "@/lib/korean";
 import { addStamps, createOrder } from "@/lib/order-api";
 import {
+  cartCount,
   cartTotal,
   extrasFor,
   missingOption,
@@ -267,10 +268,9 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     }
 
     const changed = state.editIndex >= 0;
-    const opt = line.opt ? ` ${line.opt.split(" · ").join(" ")}` : "";
     get().go("menu", { cart, cat: draft.item.cat, draft: null, editIndex: -1 });
     set({
-      say: `${line.name}${opt} ${line.qty}${unitWord(draft.item)} ${
+      say: `총 ${cartCount(cart)}잔 ${
         changed ? "으로 바꿨어요" : "담았어요"
       }. 더 필요하신 게 있나요?`,
     });

@@ -6,8 +6,8 @@ import {
 } from "@/data/menu";
 import { won } from "@/lib/korean";
 import {
+  cartCount,
   cartTotal,
-  extrasFor,
   missingOption,
   unitWord,
   type CartLine,
@@ -56,7 +56,7 @@ export function bannerText(s: DialogState): string {
     }
     case "cart":
       return s.cart.length
-        ? `${cartSummary(s.cart)}. 총 ${won(cartTotal(s.cart))}, 맞으신가요?`
+        ? `${cartCount(s.cart)}잔 담았어요. 총 ${won(cartTotal(s.cart))} 맞으신가요?`
         : "장바구니가 비어 있어요. 메뉴를 담아 주세요.";
     case "point":
       return "스탬프 적립할 전화번호를 눌러 주세요. 건너뛰려면 “적립 안 할게요”";
@@ -73,25 +73,18 @@ export function bannerText(s: DialogState): string {
   }
 }
 
-/** 안내 음성 대사 조합 (모든 모드에서 화면 전환 및 추가 옵션을 안내한다). */
+/** 안내 음성 대사 조합 (모든 모드에서 화면 전환을 안내한다). */
 export function spokenText(s: DialogState): string {
   let text = bannerText(s);
 
   if (s.screen === "menu" && !s.say) {
     text = "담으실 메뉴를 선택해주세요.";
   }
-  if (s.screen === "option" && s.draft && !missingOption(s.draft)) {
-    const names = extrasFor(s.draft.item).map((e) => e.label);
-    if (names.length) text += `. 가능한 추가 옵션은 ${names.join(", ")}이에요.`;
-  }
-  if (s.screen === "menu" && s.cart.length) {
-    text += ` 지금 장바구니에는 ${cartSummary(s.cart)}가 담겨 있어요.`;
-  }
   if (s.screen === "pay") {
-    text = "결제방법을 골라주세요. 메뉴를 더 담거나 스탬프를 적립할 수 있어요.";
+    text = "결제방법을 골라주세요.";
   }
   if (s.screen === "paying" && !s.say) {
-    text = `${cartSummary(s.cart)}. 총 ${won(cartTotal(s.cart))}입니다. ${text} ${payingCopy(s.pay).body}`;
+    text = `총 ${won(cartTotal(s.cart))}입니다. ${text} ${payingCopy(s.pay).body}`;
   }
   return text;
 }
