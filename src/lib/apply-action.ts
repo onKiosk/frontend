@@ -130,7 +130,10 @@ export function modifyDraft(
 /** NON_COFFEE는 탭이 3개(라떼/차/에이드)라서 발화 단어로 고른다. 없으면 라떼 탭. */
 function nonCoffeeTab(said: string): CategoryKey {
   if (/에이드/.test(said)) return "ade";
-  if (/유자차|대추차|캐모마일|얼그레이|아이스티|차종류|차메뉴|티/.test(said))
+  if (
+    /유자차|대추차|캐모마일|얼그레이|아이스티|차종류|차메뉴|티/.test(said) ||
+    /^차(?:$|보여|주세요|줘|를|로)|차(?:보여|주세요|메뉴|종류|목록)/.test(said)
+  )
     return "tea";
   return "latte";
 }
