@@ -1,4 +1,3 @@
-
 export interface SpeechSessionOptions {
   createRecognition: () => SpeechRecognition | null;
   /** 안내를 재생하고, 종료 시 done을 호출한다. 반환 함수는 재생을 취소한다. */
@@ -178,12 +177,7 @@ export class SpeechSession {
   }
 
   private guide() {
-    if (
-      this.disposed ||
-      !this.visible ||
-      this.paused ||
-      this.blocked
-    ) {
+    if (this.disposed || !this.visible || this.paused || this.blocked) {
       return;
     }
 
@@ -197,10 +191,7 @@ export class SpeechSession {
     this.speaking = true;
 
     const done = () => {
-      if (
-        this.disposed ||
-        generation !== this.generation
-      ) {
+      if (this.disposed || generation !== this.generation) {
         return;
       }
 
@@ -209,10 +200,7 @@ export class SpeechSession {
     };
 
     try {
-      this.cancelSpeech = this.options.speak(
-        this.guidance.text,
-        done,
-      );
+      this.cancelSpeech = this.options.speak(this.guidance.text, done);
     } catch {
       done();
     }
@@ -321,18 +309,12 @@ export class SpeechSession {
           this.fail(
             "마이크를 쓸 수 없어요. 브라우저의 마이크 권한과 연결을 확인한 뒤 다시 듣기를 눌러 주세요.",
           );
-        } else if (
-          event.error === "no-speech" ||
-          event.error === "aborted"
-        ) {
+        } else if (event.error === "no-speech" || event.error === "aborted") {
           this.schedule();
         } else {
           this.errors++;
 
-          if (
-            this.errors >= 3 ||
-            !this.guidance.automatic
-          ) {
+          if (this.errors >= 3 || !this.guidance.automatic) {
             this.fail(
               "음성 인식 연결이 끊겼어요. 연결을 확인한 뒤 다시 듣기를 눌러 주세요.",
             );

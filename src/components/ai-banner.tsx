@@ -21,9 +21,7 @@ export function AiBanner({ onInterruptAndListen }: AiBannerProps) {
           AI 음성 안내
         </p>
 
-        <p className="text-sm font-medium leading-relaxed">
-          {guidance}
-        </p>
+        <p className="text-sm font-medium leading-relaxed">{guidance}</p>
 
         {listening && (
           <p className="mt-1 text-xs text-green-300">

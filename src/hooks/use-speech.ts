@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
@@ -16,8 +15,7 @@ export function useSpeech({
     const controller = new SpeechSession({
       createRecognition: () => {
         const Recognition =
-          window.SpeechRecognition ??
-          window.webkitSpeechRecognition;
+          window.SpeechRecognition ?? window.webkitSpeechRecognition;
 
         return Recognition ? new Recognition() : null;
       },
@@ -48,17 +46,13 @@ export function useSpeech({
       onListening: (listening) =>
         useKioskStore.getState().setListening(listening),
 
-      onPaused: (voicePaused) =>
-        useKioskStore.setState({ voicePaused }),
+      onPaused: (voicePaused) => useKioskStore.setState({ voicePaused }),
 
-      onTranscript: (text) =>
-        useKioskStore.getState().setTranscript(text),
+      onTranscript: (text) => useKioskStore.getState().setTranscript(text),
 
-      onUtterance: (text) =>
-        useKioskStore.getState().handleUtterance(text),
+      onUtterance: (text) => useKioskStore.getState().handleUtterance(text),
 
-      onError: (message) =>
-        useKioskStore.getState().noteVoiceError(message),
+      onError: (message) => useKioskStore.getState().noteVoiceError(message),
     });
 
     session.current = controller;
@@ -95,10 +89,7 @@ export function useSpeech({
       controller.setVisible(!document.hidden);
     };
 
-    document.addEventListener(
-      "visibilitychange",
-      visibility,
-    );
+    document.addEventListener("visibilitychange", visibility);
 
     visibility();
     sync();
@@ -106,10 +97,7 @@ export function useSpeech({
     return () => {
       unsubscribe();
 
-      document.removeEventListener(
-        "visibilitychange",
-        visibility,
-      );
+      document.removeEventListener("visibilitychange", visibility);
 
       controller.dispose();
       session.current = null;
@@ -117,16 +105,10 @@ export function useSpeech({
   }, [alwaysSpeak]);
 
   // 기존 음성인식 일시정지 및 재개
-  const toggleListen = useCallback(
-    () => session.current?.toggle(),
-    [],
-  );
+  const toggleListen = useCallback(() => session.current?.toggle(), []);
 
   // 기존 음성인식 재시도
-  const retryListen = useCallback(
-    () => session.current?.retry(),
-    [],
-  );
+  const retryListen = useCallback(() => session.current?.retry(), []);
 
   // 신규: 안내 음성 중단 후 사용자 음성인식 시작
   const interruptAndListen = useCallback(
