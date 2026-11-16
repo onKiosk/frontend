@@ -44,8 +44,6 @@ export function cartSummary(cart: CartLine[]) {
 export function bannerText(s: DialogState): string {
   if (s.say) return s.say;
   switch (s.screen) {
-    case "start":
-      return "안녕하세요. 편한 방법을 고르시거나, 드실 메뉴를 말씀해 주세요.";
     case "menu":
       return "드실 메뉴를 말씀하시거나 눌러 주세요";
     case "option": {

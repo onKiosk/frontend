@@ -10,15 +10,7 @@ export type SizeKey = "regular" | "large";
 export type PayKey = "card" | "samsung" | "kakao" | "naver" | "apple" | "cash";
 export type ModeKey = "basic" | "low" | "contrast" | "voice";
 export type ScreenKey =
-  | "start"
-  | "menu"
-  | "option"
-  | "cart"
-  | "point"
-  | "pay"
-  | "paying"
-  | "receipt"
-  | "done";
+  "menu" | "option" | "cart" | "point" | "pay" | "paying" | "receipt" | "done";
 
 export interface MenuItem {
   name: string;
@@ -124,11 +116,12 @@ export const PAY_METHODS: { key: PayKey; label: string; hint: string }[] = [
   { key: "cash", label: "현금", hint: "카운터 결제" },
 ];
 
-export const MODES: { key: ModeKey; label: string; sub: string }[] = [
-  { key: "basic", label: "기본 모드", sub: "터치 + 음성" },
-  { key: "low", label: "하단 모드", sub: "휠체어 · 저신장" },
-  { key: "contrast", label: "고대비 · 큰 글씨", sub: "화면·글자 크게" },
-  { key: "voice", label: "음성 모드", sub: "말로만 주문" },
+/** 모드 선택 바에 들어갈 짧은 이름과 설명 */
+export const MODES: { key: ModeKey; short: string; sub: string }[] = [
+  { key: "basic", short: "기본", sub: "터치 + 음성" },
+  { key: "low", short: "하단", sub: "휠체어·저신장" },
+  { key: "contrast", short: "고대비", sub: "큰 글씨" },
+  { key: "voice", short: "음성", sub: "말로만 주문" },
 ];
 
 export const MODE_LABEL: Record<ModeKey, string> = {
@@ -139,27 +132,22 @@ export const MODE_LABEL: Record<ModeKey, string> = {
 };
 
 export const STEPS: { key: ScreenKey; label: string }[] = [
-  { key: "start", label: "① 시작" },
-  { key: "menu", label: "② 메뉴" },
-  { key: "option", label: "③ 옵션" },
-  { key: "cart", label: "④ 장바구니" },
-  { key: "point", label: "⑤ 적립" },
-  { key: "pay", label: "⑥ 결제" },
-  { key: "done", label: "⑦ 완료" },
+  { key: "menu", label: "① 메뉴" },
+  { key: "option", label: "② 옵션" },
+  { key: "cart", label: "③ 장바구니" },
+  { key: "point", label: "④ 적립" },
+  { key: "pay", label: "⑤ 결제" },
+  { key: "done", label: "⑥ 완료" },
 ];
 
 /** 데모용 "말해보기" 예시 문장 */
 export const SAY_CHIPS: Record<ScreenKey, string[]> = {
-  start: [
-    "아메리카노 하나 주세요",
-    "아이스 아메리카노 라지 한 잔 카드로 결제",
-    "고대비 모드로 해 줘",
-  ],
   menu: [
     "아이스 아메리카노 라지로 두 잔",
     "카페라떼 핫 레귤러 카드로 할게요",
     "콜드브루 주세요",
     "시원한 거 추천해 줘",
+    "고대비 모드로 해 줘",
   ],
   option: [
     "따뜻하게요",

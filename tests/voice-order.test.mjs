@@ -155,7 +155,7 @@ test("음성으로 장바구니를 확인하면 적립 화면으로, 수단을 �
 
 test("빈 장바구니로 결제할 수 없다", () => {
   say("카드로 결제");
-  assert.equal(state().screen, "start");
+  assert.equal(state().screen, "menu");
   state().startPay("card");
   assert.notEqual(state().screen, "paying");
   assert.match(state().say, /비어/);
