@@ -63,7 +63,6 @@ export interface ContextSource {
 export function toContext(s: ContextSource): ActionContext {
   const ctx: ActionContext = { screen: s.screen };
   switch (s.screen) {
-    case "start":
     case "menu":
     case "option":
     case "cart":

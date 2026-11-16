@@ -121,7 +121,7 @@ export interface KioskActions {
 export type KioskStore = KioskState & KioskActions;
 
 const INITIAL: KioskState = {
-  screen: "start",
+  screen: "menu",
   mode: "basic",
   cat: "coffee",
   cart: [],
@@ -161,10 +161,6 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   },
 
   jump: (screen) => {
-    if (screen === "start") {
-      get().reset();
-      return;
-    }
     if (screen === "done") return;
     const patch: Partial<KioskState> = {};
     get().go(screen, patch);
@@ -176,11 +172,6 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
       mode === "voice"
         ? "음성 모드예요. 말로만 주문할 수 있어요. 드실 메뉴를 말씀해 주세요."
         : `${josa(label, "으로", "로")} 바꿨어요.`;
-    if (get().screen === "start") {
-      get().go("menu", { mode });
-      set({ say });
-      return;
-    }
     set({ mode, say });
   },
 
@@ -572,7 +563,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     return true;
   }
 
-  if (["start", "menu", "option", "cart", "pay"].includes(screen)) {
+  if (["menu", "option", "cart", "pay"].includes(screen)) {
     const item = matchItem(said);
     if (item) {
       orderByVoice(store, item, said);

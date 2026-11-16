@@ -1,11 +1,10 @@
 "use client";
 
-import { MODE_LABEL } from "@/data/menu";
 import { themeFor, themeVars } from "@/lib/theme";
 import { useKioskStore } from "@/store/kiosk-store";
 import { KIOSK_HEIGHT, KIOSK_WIDTH } from "@/hooks/use-kiosk-scale";
+import { ModeSelector } from "@/components/mode-selector";
 import { StaffModal } from "@/components/staff-modal";
-import { KioskButton } from "@/components/ui/kiosk-button";
 import { CartFooter, CartScreen } from "@/components/screens/cart-screen";
 import { MenuFooter, MenuScreen } from "@/components/screens/menu-screen";
 import { OptionFooter, OptionScreen } from "@/components/screens/option-screen";
@@ -22,7 +21,6 @@ import {
   ReceiptFooter,
   ReceiptScreen,
 } from "@/components/screens/receipt-screen";
-import { StartFooter, StartScreen } from "@/components/screens/start-screen";
 
 interface Props {
   scale: number;
@@ -32,7 +30,6 @@ interface Props {
 /** 540×960 키오스크 화면 한 대. */
 export function KioskFrame({ scale, onRetryListen }: Props) {
   const mode = useKioskStore((s) => s.mode);
-  const go = useKioskStore((s) => s.go);
   const callStaff = useKioskStore((s) => s.callStaff);
 
   const theme = themeFor(mode);
@@ -54,18 +51,10 @@ export function KioskFrame({ scale, onRetryListen }: Props) {
         <div className="text-[1.1em] font-bold tracking-[-0.02em]">
           온키오스크 카페
         </div>
-        <div className="flex items-center gap-[0.6em]">
-          <div className="text-[0.78em] font-bold text-(--k-sub)">
-            {MODE_LABEL[mode]}
-          </div>
-          <KioskButton
-            className="rounded-[0.8em] px-[0.85em] py-[0.4em] text-[0.85em]"
-            onClick={() => go("start")}
-          >
-            모드 변경
-          </KioskButton>
-        </div>
       </header>
+
+      {/* 모드 선택은 늘 보인다. 하단 모드에서는 손이 닿는 아래쪽으로 옮긴다. */}
+      {!isLow && <ModeSelector className="mx-[1.1em] mt-[0.7em]" />}
 
       {/* 하단 모드: 손이 닿는 아래쪽으로 조작부를 몰아 준다 */}
       {isLow && (
@@ -82,24 +71,17 @@ export function KioskFrame({ scale, onRetryListen }: Props) {
         <ScreenFooter />
       </div>
 
-      <div className="flex flex-none">
-        {isLow && (
-          <button
-            type="button"
-            onClick={() => go("start")}
-            className="min-h-[3.3em] flex-1 border-none border-r-2 border-white/50 bg-(--k-red) text-[0.95em] font-bold text-white"
-          >
-            모드 변경
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={callStaff}
-          className="min-h-[3.3em] flex-[2.5] border-none bg-(--k-red) text-[0.95em] font-bold text-white"
-        >
-          직원 호출 (“도와주세요”라고 말해도 돼요)
-        </button>
-      </div>
+      {isLow && (
+        <ModeSelector className="border-t border-(--k-line) bg-(--k-surface) px-[1.1em] pb-[0.8em] pt-[0.6em]" />
+      )}
+
+      <button
+        type="button"
+        onClick={callStaff}
+        className="min-h-[3.3em] flex-none border-none bg-(--k-red) text-[0.95em] font-bold text-white"
+      >
+        직원 호출 (“도와주세요”라고 말해도 돼요)
+      </button>
 
       <StaffModal onRetryVoice={onRetryListen} />
     </div>
@@ -110,8 +92,6 @@ function ScreenBody() {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
-    case "start":
-      return <StartScreen />;
     case "menu":
       return <MenuScreen />;
     case "option":
@@ -135,8 +115,6 @@ function ScreenFooter() {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
-    case "start":
-      return <StartFooter />;
     case "menu":
       return <MenuFooter />;
     case "option":
