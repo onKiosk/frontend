@@ -287,9 +287,14 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   clearCart: () => set({ cart: [], say: "장바구니를 모두 비웠어요." }),
 
   confirmCart: () => {
-    if (get().cart.length) get().go("point");
-  },
+    if (!get().cart.length) return;
 
+    if (get().phone) {
+      get().go("pay");
+    } else {
+      get().go("point");
+    }
+  },
   pressPhoneKey: (key) => {
     const phone = get().phone;
     const next =
