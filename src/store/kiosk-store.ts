@@ -35,7 +35,6 @@ import {
   optionText,
   stampCount,
   toCartLine,
-  unitWord,
   type CartLine,
   type OptionDraft,
 } from "@/lib/pricing";
