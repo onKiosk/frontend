@@ -381,12 +381,14 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
  * - 옵션 화면(draft 진행 중): 데이터셋에 draft 키가 없으므로 기존 규칙으로 이어서 처리
  * - 장바구니/결제 화면에서 "더 담을게" 등 추가 주문 의도: 서버 Action 밖의 명령이므로 로컬
  * - 이전/뒤로/처음/기본 모드: 서버 Action 밖의 명령
+ * - 영수증 선택: 예/아니오만 받으므로 로컬
+ * - 적립 화면: 숫자 발화는 개인정보라 서버로 보내지 않고, 건너뛰기·결제 수단 말하기도 로컬로 처리
  */
 function shouldAskServer(s: KioskState, raw: string): boolean {
   if (!isActionApiEnabled()) return false;
   const said = squash(raw);
   if (s.screen === "paying") return false;
-  if (s.screen === "point" && /\d/.test(said)) return false;
+  if (s.screen === "point") return false;
   if (s.screen === "option" && s.draft) return false;
   if (
     (s.screen === "cart" || s.screen === "pay") &&
@@ -396,6 +398,7 @@ function shouldAskServer(s: KioskState, raw: string): boolean {
     return false;
   if (/이전|뒤로|처음|기본모드/.test(said)) return false;
   return true;
+  if (s.screen === "receipt") return false;
 }
 
 /** 인식 실패 1회를 기록하고, FAIL_LIMIT에 닿으면 직원 호출을 제안한다. */
@@ -548,7 +551,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       if (pay) store.startPay(pay);
       return true;
     }
-    if (/안|건너|괜찮|없/.test(said)) {
+    if (/안|않|건너|괜찮|없|아니|말고|싫|넘어|스킵/.test(said)) {
       store.skipPoint();
       const pay = matchPay(said);
       if (pay) store.startPay(pay);
@@ -563,11 +566,11 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   }
 
   if (screen === "receipt") {
-    if (/아니|안|괜찮|필요없/.test(said)) {
+    if (/아니|안|않|괜찮|필요없|말고|싫/.test(said)) {
       store.finish(false);
       return true;
     }
-    if (/네|출력|뽑|주세요/.test(said)) {
+    if (/네|응|예|출력|뽑|인쇄|주세요|해줘|좋아/.test(said)) {
       store.finish(true);
       return true;
     }
