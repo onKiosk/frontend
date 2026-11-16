@@ -46,12 +46,9 @@ export function PayFooter() {
 
   return (
     <>
-      <ActionButton
-  onClick={() => go("point")}
-  disabled={isStampRegistered}
->
-  {isStampRegistered ? "스탬프 적립 완료" : "스탬프 적립하기"}
-</ActionButton>
+      <ActionButton onClick={() => go("point")} disabled={isStampRegistered}>
+        {isStampRegistered ? "스탬프 적립 완료" : "스탬프 적립하기"}
+      </ActionButton>
       <div className="flex gap-[0.55em]">
         <ActionButton className="flex-1" onClick={() => go("cart")}>
           주문 확인·수정
