@@ -4,6 +4,7 @@ import { themeFor, themeVars } from "@/lib/theme";
 import { useKioskStore } from "@/store/kiosk-store";
 import { KIOSK_HEIGHT, KIOSK_WIDTH } from "@/hooks/use-kiosk-scale";
 import { ModeSelector } from "@/components/mode-selector";
+import { AiBanner } from "@/components/ai-banner";
 import { StaffModal } from "@/components/staff-modal";
 import { CartFooter, CartScreen } from "@/components/screens/cart-screen";
 import { MenuFooter, MenuScreen } from "@/components/screens/menu-screen";
@@ -25,10 +26,15 @@ import {
 interface Props {
   scale: number;
   onRetryListen: () => void;
+  onInterruptAndListen: () => void;
 }
 
 /** 540×960 키오스크 화면 한 대. */
-export function KioskFrame({ scale, onRetryListen }: Props) {
+export function KioskFrame({
+  scale,
+  onRetryListen,
+  onInterruptAndListen,
+}: Props) {
   const mode = useKioskStore((s) => s.mode);
   const callStaff = useKioskStore((s) => s.callStaff);
 
@@ -53,10 +59,17 @@ export function KioskFrame({ scale, onRetryListen }: Props) {
         </div>
       </header>
 
-      {/* 모드 선택은 늘 보인다. 하단 모드에서는 손이 닿는 아래쪽으로 옮긴다. */}
-      {!isLow && <ModeSelector className="mx-[1.1em] mt-[0.7em]" />}
+      {/* 기본·고대비 모드: 모드 선택 바로 아래 음성 안내 */}
+      {!isLow && (
+        <>
+          <ModeSelector className="mx-[1.1em] mt-[0.7em]" />
+          <div className="mx-[1.1em] mt-[0.6em] flex-none">
+            <AiBanner onInterruptAndListen={onInterruptAndListen} />
+          </div>
+        </>
+      )}
 
-      {/* 하단 모드: 손이 닿는 아래쪽으로 조작부를 몰아 준다 */}
+      {/* 하단 모드: 화면 아래쪽에 조작부 배치 */}
       {isLow && (
         <div className="flex h-[8em] flex-none items-end justify-center pb-[0.7em] text-[0.85em] font-bold text-(--k-sub)">
           ↓ 모든 조작은 화면 아래쪽에서 할 수 있어요
@@ -71,8 +84,14 @@ export function KioskFrame({ scale, onRetryListen }: Props) {
         <ScreenFooter />
       </div>
 
+      {/* 하단 모드: 모드 선택 바로 아래 음성 안내 */}
       {isLow && (
-        <ModeSelector className="border-t border-(--k-line) bg-(--k-surface) px-[1.1em] pb-[0.8em] pt-[0.6em]" />
+        <>
+          <ModeSelector className="border-t border-(--k-line) bg-(--k-surface) px-[1.1em] pb-[0.8em] pt-[0.6em]" />
+          <div className="flex-none px-[1.1em] pb-[0.6em]">
+            <AiBanner onInterruptAndListen={onInterruptAndListen} />
+          </div>
+        </>
       )}
 
       <button
