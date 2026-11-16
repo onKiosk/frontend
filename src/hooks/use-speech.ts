@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
@@ -15,66 +16,127 @@ export function useSpeech({
     const controller = new SpeechSession({
       createRecognition: () => {
         const Recognition =
-          window.SpeechRecognition ?? window.webkitSpeechRecognition;
+          window.SpeechRecognition ??
+          window.webkitSpeechRecognition;
+
         return Recognition ? new Recognition() : null;
       },
+
       speak: (text, done) => {
         if (!window.speechSynthesis) {
           done();
           return () => {};
         }
+
         const utterance = new SpeechSynthesisUtterance(text);
+
         utterance.lang = "ko-KR";
         utterance.rate = 1.05;
         utterance.onend = done;
         utterance.onerror = done;
+
         window.speechSynthesis.speak(utterance);
+
         return () => {
-          utterance.onend = utterance.onerror = null;
+          utterance.onend = null;
+          utterance.onerror = null;
+
           window.speechSynthesis.cancel();
         };
       },
+
       onListening: (listening) =>
         useKioskStore.getState().setListening(listening),
-      onPaused: (voicePaused) => useKioskStore.setState({ voicePaused }),
-      onTranscript: (text) => useKioskStore.getState().setTranscript(text),
-      onUtterance: (text) => useKioskStore.getState().handleUtterance(text),
-      onError: (message) => useKioskStore.getState().noteVoiceError(message),
+
+      onPaused: (voicePaused) =>
+        useKioskStore.setState({ voicePaused }),
+
+      onTranscript: (text) =>
+        useKioskStore.getState().setTranscript(text),
+
+      onUtterance: (text) =>
+        useKioskStore.getState().handleUtterance(text),
+
+      onError: (message) =>
+        useKioskStore.getState().noteVoiceError(message),
     });
+
     session.current = controller;
+
     const sync = () => {
       const state = useKioskStore.getState();
+
       controller.update({
         automatic: true,
+
         speak: state.mode === "voice" || alwaysSpeak,
+
         text: state.staff
           ? staffTexts(state.staff).join(". ")
           : spokenText(state),
       });
     };
+
     // 한 발화가 상태를 여러 번 바꾸더라도 최종 안내만 읽는다.
     let queued = false;
+
     const unsubscribe = useKioskStore.subscribe(() => {
       if (queued) return;
+
       queued = true;
+
       queueMicrotask(() => {
         queued = false;
         sync();
       });
     });
-    const visibility = () => controller.setVisible(!document.hidden);
-    document.addEventListener("visibilitychange", visibility);
+
+    const visibility = () => {
+      controller.setVisible(!document.hidden);
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      visibility,
+    );
+
     visibility();
     sync();
+
     return () => {
       unsubscribe();
-      document.removeEventListener("visibilitychange", visibility);
+
+      document.removeEventListener(
+        "visibilitychange",
+        visibility,
+      );
+
       controller.dispose();
       session.current = null;
     };
   }, [alwaysSpeak]);
 
-  const toggleListen = useCallback(() => session.current?.toggle(), []);
-  const retryListen = useCallback(() => session.current?.retry(), []);
-  return { toggleListen, retryListen };
+  // 기존 음성인식 일시정지 및 재개
+  const toggleListen = useCallback(
+    () => session.current?.toggle(),
+    [],
+  );
+
+  // 기존 음성인식 재시도
+  const retryListen = useCallback(
+    () => session.current?.retry(),
+    [],
+  );
+
+  // 신규: 안내 음성 중단 후 사용자 음성인식 시작
+  const interruptAndListen = useCallback(
+    () => session.current?.interruptAndListen(),
+    [],
+  );
+
+  return {
+    toggleListen,
+    retryListen,
+    interruptAndListen,
+  };
 }
