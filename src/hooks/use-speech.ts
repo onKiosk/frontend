@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { spokenText, staffTexts } from "@/lib/dialog";
 import { SpeechSession } from "@/lib/speech-session";
 import { useKioskStore } from "@/store/kiosk-store";
@@ -10,6 +10,7 @@ export function useSpeech({
   alwaysSpeak = true,
 }: { alwaysSpeak?: boolean } = {}) {
   const session = useRef<SpeechSession | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     const controller = new SpeechSession({
@@ -20,28 +21,39 @@ export function useSpeech({
         return Recognition ? new Recognition() : null;
       },
 
-      speak: (text, done) => {
+      speak: (text, done, onBoundary) => {
         if (!window.speechSynthesis) {
           done();
           return () => {};
         }
 
+        // 이전 잔여 발화 안전 정리
+        window.speechSynthesis.cancel();
+
         const utterance = new SpeechSynthesisUtterance(text);
 
         utterance.lang = "ko-KR";
         utterance.rate = 1.05;
+        utterance.onboundary = (event) => {
+          if (typeof event.charIndex === "number") {
+            onBoundary?.(event.charIndex);
+          }
+        };
         utterance.onend = done;
         utterance.onerror = done;
 
         window.speechSynthesis.speak(utterance);
 
         return () => {
+          utterance.onboundary = null;
           utterance.onend = null;
           utterance.onerror = null;
 
           window.speechSynthesis.cancel();
         };
       },
+
+      onSpeaking: (speaking) => setIsSpeaking(speaking),
 
       onListening: (listening) =>
         useKioskStore.getState().setListening(listening),
@@ -104,19 +116,27 @@ export function useSpeech({
     };
   }, [alwaysSpeak]);
 
+  // 음성 멈춤 <-> 다시 듣기(이어서 재생) 통합 토글
+  const toggleGuidance = useCallback(
+    () => session.current?.toggleGuidance(),
+    [],
+  );
+
   // 기존 음성인식 일시정지 및 재개
   const toggleListen = useCallback(() => session.current?.toggle(), []);
 
   // 기존 음성인식 재시도
   const retryListen = useCallback(() => session.current?.retry(), []);
 
-  // 신규: 안내 음성 중단 후 사용자 음성인식 시작
+  // 기존 호환용
   const interruptAndListen = useCallback(
     () => session.current?.interruptAndListen(),
     [],
   );
 
   return {
+    isSpeaking,
+    toggleGuidance,
     toggleListen,
     retryListen,
     interruptAndListen,

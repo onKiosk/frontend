@@ -25,15 +25,17 @@ import {
 
 interface Props {
   scale: number;
+  isSpeaking: boolean;
   onRetryListen: () => void;
-  onInterruptAndListen: () => void;
+  onToggleGuidance: () => void;
 }
 
 /** 540×960 키오스크 화면 한 대. */
 export function KioskFrame({
   scale,
+  isSpeaking,
   onRetryListen,
-  onInterruptAndListen,
+  onToggleGuidance,
 }: Props) {
   const mode = useKioskStore((s) => s.mode);
   const callStaff = useKioskStore((s) => s.callStaff);
@@ -64,7 +66,10 @@ export function KioskFrame({
         <>
           <ModeSelector className="mx-[1.1em] mt-[0.7em]" />
           <div className="mx-[1.1em] mt-[0.6em] flex-none">
-            <AiBanner onInterruptAndListen={onInterruptAndListen} />
+            <AiBanner
+              isSpeaking={isSpeaking}
+              onToggleGuidance={onToggleGuidance}
+            />
           </div>
         </>
       )}
@@ -89,7 +94,10 @@ export function KioskFrame({
         <>
           <ModeSelector className="border-t border-(--k-line) bg-(--k-surface) px-[1.1em] pb-[0.8em] pt-[0.6em]" />
           <div className="flex-none px-[1.1em] pb-[0.6em]">
-            <AiBanner onInterruptAndListen={onInterruptAndListen} />
+            <AiBanner
+              isSpeaking={isSpeaking}
+              onToggleGuidance={onToggleGuidance}
+            />
           </div>
         </>
       )}
