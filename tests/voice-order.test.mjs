@@ -357,3 +357,43 @@ test("콜드브루 오인식 변형 발화도 품절 안내로 연결된다", ()
   assert.equal(state().screen, "menu");
   assert.match(state().say, /콜드브루.*품절/);
 });
+
+test("전 메뉴의 대표 STT 오인식 변형도 올바른 메뉴로 연결된다", () => {
+  say("다닐나라 때 따뜻한 레귤러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "바닐라라떼");
+
+  say("카프치노 아이스 라지");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "카푸치노");
+
+  say("카페목아 따뜻한 레귤러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "카페모카");
+
+  say("요자차 따뜻한 레귤러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "유자차");
+
+  say("대추 하나 주세요");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "대추차");
+  say("따뜻한 레귤러");
+
+  say("얼그 에 따뜻한 레귤러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "얼그레이");
+
+  say("자몽헤이드 라지");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "자몽에이드");
+
+  say("베이을 하나");
+  assert.equal(state().cart.at(-1).name, "베이글");
+
+  say("키라미수 하나");
+  assert.equal(state().cart.at(-1).name, "티라미수");
+
+  say("초코쿠 주세요");
+  assert.equal(state().cart.at(-1).name, "초코쿠키");
+});

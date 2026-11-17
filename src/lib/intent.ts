@@ -14,6 +14,7 @@ import { extrasFor, type OptionDraft } from "@/lib/pricing";
 
 /** 긴 이름부터 맞춰야 "카페라떼"가 "라떼"에 먹히지 않는다. */
 const BY_LENGTH = [...MENU_ITEMS].sort((a, b) => b.name.length - a.name.length);
+const ALIASES_BY_LENGTH = [...ALIASES].sort((a, b) => b[0].length - a[0].length);
 
 const squashName = (s: string) => s.replace(/\s/g, "");
 
@@ -22,7 +23,7 @@ export function matchItem(said: string): MenuItem | null {
   for (const item of BY_LENGTH) {
     if (said.includes(squashName(item.name))) return item;
   }
-  for (const [alias, name] of ALIASES) {
+  for (const [alias, name] of ALIASES_BY_LENGTH) {
     if (said.includes(alias)) return findMenuItem(name) ?? null;
   }
   return null;
