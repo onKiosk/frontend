@@ -551,7 +551,9 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
           (wantsEdit || draft.qty === targetLine.draft.qty || hits > 1);
         if (hasOptionChange && !missingOption(draft)) {
           const updated = toCartLine(draft);
-          const cart = store.cart.map((line, i) => (i === idx ? updated : line));
+          const cart = store.cart.map((line, i) =>
+            i === idx ? updated : line,
+          );
           useKioskStore.setState({
             cart,
             say: `${josa(updated.name, "을", "를")} 요청하신 대로 바꿨어요.`,

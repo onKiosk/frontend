@@ -14,7 +14,9 @@ import { extrasFor, type OptionDraft } from "@/lib/pricing";
 
 /** 긴 이름부터 맞춰야 "카페라떼"가 "라떼"에 먹히지 않는다. */
 const BY_LENGTH = [...MENU_ITEMS].sort((a, b) => b.name.length - a.name.length);
-const ALIASES_BY_LENGTH = [...ALIASES].sort((a, b) => b[0].length - a[0].length);
+const ALIASES_BY_LENGTH = [...ALIASES].sort(
+  (a, b) => b[0].length - a[0].length,
+);
 
 const squashName = (s: string) => s.replace(/\s/g, "");
 
@@ -204,9 +206,7 @@ export function applyOptionSpeech(
     hits++;
   }
   if (
-    /[레네내][귤글길][러로]|귤[러로]|(?:보통|기본)(?!우유)|작은|스몰/.test(
-      said,
-    )
+    /[레네내][귤글길][러로]|귤[러로]|(?:보통|기본)(?!우유)|작은|스몰/.test(said)
   ) {
     next.size = "regular";
     hits++;
@@ -222,7 +222,8 @@ export function applyOptionSpeech(
   }[] = [];
 
   anchors.forEach((anchor, i) => {
-    const nextStart = i + 1 < anchors.length ? anchors[i + 1].start : said.length;
+    const nextStart =
+      i + 1 < anchors.length ? anchors[i + 1].start : said.length;
     const tail = said.slice(anchor.start, nextStart);
     const prefix = said.slice(i > 0 ? anchors[i - 1].end : 0, anchor.start);
 
@@ -244,7 +245,8 @@ export function applyOptionSpeech(
     const forcedFalse =
       (anchor.key === "light" &&
         (/^진/.test(anchor.matched) || /(?:안|않)$/.test(prefix))) ||
-      (anchor.key === "milk" && /^(?:일반|그냥|보통|원래|흰)/.test(anchor.matched));
+      (anchor.key === "milk" &&
+        /^(?:일반|그냥|보통|원래|흰)/.test(anchor.matched));
 
     const remove = forcedFalse || REMOVE_OPTION_RE.test(tail);
     const explicitPos = !remove && POSITIVE_OPTION_RE.test(tail);

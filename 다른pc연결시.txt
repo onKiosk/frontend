@@ -1,0 +1,5 @@
+.env.local 파일내용을 아래 텍스트로 교체
+NEXT_PUBLIC_ACTION_API_URL=http://orangepi5plus.local:8000
+
+크롬이나 엣지에서 주소입력
+http://localhost:3000

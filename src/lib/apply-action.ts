@@ -13,7 +13,11 @@ import type {
   ServerSize,
   ServerTemperature,
 } from "@/lib/action-types";
-import { applyOptionSpeech, hasOptionRemovalIntent, parseQty } from "@/lib/intent";
+import {
+  applyOptionSpeech,
+  hasOptionRemovalIntent,
+  parseQty,
+} from "@/lib/intent";
 import { josa, squash } from "@/lib/korean";
 import {
   extrasFor,
