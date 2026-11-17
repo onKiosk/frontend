@@ -397,7 +397,7 @@ function shouldAskServer(s: KioskState, raw: string): boolean {
   )
     return false;
   if (/이전|뒤로|처음|기본모드/.test(said)) return false;
-  if (s.screen === "receipt") return false;
+  if (s.screen === "receipt" || s.screen === "done") return false;
   return true;
 }
 
@@ -576,7 +576,12 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     }
   }
 
-  if (screen === "done" && /처음/.test(said)) {
+  if (
+    screen === "done" &&
+    /처음|첨으로|메뉴|다시|알았|알겠|고마|감사|확인|완료|끝|네|응|주문/.test(
+      said,
+    )
+  ) {
     store.reset();
     return true;
   }

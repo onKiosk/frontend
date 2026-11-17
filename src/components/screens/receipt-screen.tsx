@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { won } from "@/lib/korean";
 import { cartTotal } from "@/lib/pricing";
 import { useKioskStore } from "@/store/kiosk-store";
@@ -58,6 +59,21 @@ export function DoneScreen() {
   const stampFailed = useKioskStore((s) => s.stampFailed);
   const receipt = useKioskStore((s) => s.receipt);
   const stamp = useKioskStore((s) => s.stamp);
+  const listening = useKioskStore((s) => s.listening);
+  const transcript = useKioskStore((s) => s.transcript);
+  const say = useKioskStore((s) => s.say);
+  const staff = useKioskStore((s) => s.staff);
+  const reset = useKioskStore((s) => s.reset);
+
+  useEffect(() => {
+    if (staff !== null) return;
+    // 안내 음성이 끝나고 듣기 상태가 시작된 뒤 5초간 반응이 없으면 메뉴판으로 복귀한다.
+    const delay = listening ? 5000 : 10000;
+    const timer = setTimeout(() => {
+      reset();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [listening, transcript, say, staff, reset]);
 
   const notes = [
     // 주문 저장에 실패했으면 영수증 안내는 숨기고 실패 안내만 보여 준다.
