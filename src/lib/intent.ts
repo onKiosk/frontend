@@ -90,12 +90,83 @@ function matchQty(said: string): number | null {
     : null;
 }
 
+const SHOT_RE =
+  /샷|[샤셔사차]추가|[샤셔]추(?:가|(?=$|[.,?!]))|[사차삿삭]추(?:가|(?=$|[.,?!]))|셔츠가|샤츠가|샤타|[샤셔삿삭](?=빼|제외|취소|없|말고)|^추(?:가)?(?:해|해줘|주세요|요)?[.!?]*$/;
+const SYRUP_RE = /시럽|실업/;
+const LIGHT_RE = /연하|연한|진하|진한/;
+const MILK_RE = /(?:일반|그냥|보통|원래|흰)?우유|오트|오토|두유/;
+
 const EXTRA_PATTERNS: [ExtraKey, RegExp][] = [
-  ["shot", /샷/],
-  ["syrup", /시럽/],
-  ["light", /연하/],
-  ["milk", /우유|오트/],
+  ["shot", SHOT_RE],
+  ["syrup", SYRUP_RE],
+  ["light", LIGHT_RE],
+  ["milk", MILK_RE],
 ];
+
+const NON_EXTRA_ANCHOR_RE =
+  /얼음|따뜻|따듯|뜨겁|뜨거|핫|차갑|차가|아이스|아이수|라지|낮지|낮으로|낮이|큰거|큰걸|큰사이즈|크게|[레네내][귤글길][러로]|귤[러로]|작은|스몰|(?:보통|기본)(?!우유)/gi;
+
+const REMOVE_OPTION_RE =
+  /빼|뺏|뺐|제외|취소|없애|없이|없게|없으|없어|말고|안넣|안할|안해|안주|않|하지마|넣지마|주지마/;
+const POSITIVE_OPTION_RE =
+  /하고|넣어|넣고|넣|해줘|해요|해주세요|해|줄|줘|주세요|할/;
+
+export const EXTRA_OR_ICE_RE = new RegExp(
+  `${SHOT_RE.source}|${SYRUP_RE.source}|${LIGHT_RE.source}|${MILK_RE.source}|얼음`,
+);
+
+export function hasOptionRemovalIntent(said: string): boolean {
+  return (
+    EXTRA_OR_ICE_RE.test(said) &&
+    (REMOVE_OPTION_RE.test(said) ||
+      /진하|진한|(?:일반|그냥|보통|원래|흰)우유/.test(said))
+  );
+}
+
+interface OptionAnchor {
+  start: number;
+  end: number;
+  key: ExtraKey | "ice" | null;
+  matched: string;
+}
+
+function collectAnchors(said: string): OptionAnchor[] {
+  const raw: OptionAnchor[] = [];
+  for (const [key, re] of EXTRA_PATTERNS) {
+    for (const m of said.matchAll(new RegExp(re.source, "g"))) {
+      if (m.index !== undefined) {
+        raw.push({
+          start: m.index,
+          end: m.index + m[0].length,
+          key,
+          matched: m[0],
+        });
+      }
+    }
+  }
+  for (const m of said.matchAll(NON_EXTRA_ANCHOR_RE)) {
+    if (m.index !== undefined) {
+      raw.push({
+        start: m.index,
+        end: m.index + m[0].length,
+        key: m[0] === "얼음" ? "ice" : null,
+        matched: m[0],
+      });
+    }
+  }
+  raw.sort((a, b) => {
+    if (a.start !== b.start) return a.start - b.start;
+    // 같은 시작 위치면 추가 옵션/얼음을 우선한다
+    return (b.key ? 1 : 0) - (a.key ? 1 : 0);
+  });
+
+  const accepted: OptionAnchor[] = [];
+  for (const anchor of raw) {
+    const prev = accepted.at(-1);
+    if (!prev || anchor.start >= prev.end) accepted.push(anchor);
+  }
+  return accepted;
+}
 
 /**
  * 발화에서 읽어낸 옵션을 draft에 반영한 새 draft와, 반영된 항목 수를 돌려준다.
@@ -131,29 +202,77 @@ export function applyOptionSpeech(
     next.size = "large";
     hits++;
   }
-  if (/[레네내][귤글길][러로]|귤[러로]|보통|기본|작은|스몰/.test(said)) {
+  if (
+    /[레네내][귤글길][러로]|귤[러로]|(?:보통|기본)(?!우유)|작은|스몰/.test(
+      said,
+    )
+  ) {
     next.size = "regular";
     hits++;
   }
-  if (/얼음/.test(said)) {
-    next.ice = /없/.test(said)
-      ? "none"
-      : /적/.test(said)
-        ? "less"
-        : /많/.test(said)
-          ? "more"
-          : "normal";
-    next.temp = "ice";
-    hits++;
+
+  const anchors = collectAnchors(said);
+  const available = extrasFor(item).map((e) => e.key);
+  const resolvedExtras: {
+    index: number;
+    key: ExtraKey;
+    value: boolean;
+    explicitPos: boolean;
+  }[] = [];
+
+  anchors.forEach((anchor, i) => {
+    const nextStart = i + 1 < anchors.length ? anchors[i + 1].start : said.length;
+    const tail = said.slice(anchor.start, nextStart);
+    const prefix = said.slice(i > 0 ? anchors[i - 1].end : 0, anchor.start);
+
+    if (anchor.key === "ice") {
+      next.ice = REMOVE_OPTION_RE.test(tail)
+        ? "none"
+        : /적|조금|살짝|덜/.test(tail)
+          ? "less"
+          : /많|가득/.test(tail)
+            ? "more"
+            : "normal";
+      next.temp = "ice";
+      hits++;
+      return;
+    }
+
+    if (!anchor.key || !available.includes(anchor.key)) return;
+
+    const forcedFalse =
+      (anchor.key === "light" &&
+        (/^진/.test(anchor.matched) || /(?:안|않)$/.test(prefix))) ||
+      (anchor.key === "milk" && /^(?:일반|그냥|보통|원래|흰)/.test(anchor.matched));
+
+    const remove = forcedFalse || REMOVE_OPTION_RE.test(tail);
+    const explicitPos = !remove && POSITIVE_OPTION_RE.test(tail);
+    resolvedExtras.push({
+      index: i,
+      key: anchor.key,
+      value: !remove,
+      explicitPos,
+    });
+  });
+
+  // "샷이랑 시럽 빼줘"처럼 직전 추가 옵션에 동사 없이 나열만 된 경우 뒤의 빼기 의도를 이어받는다.
+  for (let i = resolvedExtras.length - 2; i >= 0; i--) {
+    const curr = resolvedExtras[i];
+    const nextExtra = resolvedExtras[i + 1];
+    if (
+      curr.index + 1 === nextExtra.index &&
+      curr.value &&
+      !curr.explicitPos &&
+      !nextExtra.value
+    ) {
+      curr.value = false;
+    }
   }
 
-  const available = extrasFor(item).map((e) => e.key);
-  EXTRA_PATTERNS.forEach(([key, re]) => {
-    if (available.includes(key) && re.test(said)) {
-      next.extras[key] = true;
-      hits++;
-    }
-  });
+  for (const entry of resolvedExtras) {
+    next.extras[entry.key] = entry.value;
+    hits++;
+  }
 
   return { draft: next, hits };
 }

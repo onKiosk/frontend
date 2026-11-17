@@ -13,7 +13,7 @@ import type {
   ServerSize,
   ServerTemperature,
 } from "@/lib/action-types";
-import { applyOptionSpeech, parseQty } from "@/lib/intent";
+import { applyOptionSpeech, hasOptionRemovalIntent, parseQty } from "@/lib/intent";
 import { josa, squash } from "@/lib/korean";
 import {
   extrasFor,
@@ -235,7 +235,10 @@ export function applyAction(
     }
 
     case "remove_from_cart": {
-      if (!store.cart.some((l) => l.name === action.target))
+      if (
+        !store.cart.some((l) => l.name === action.target) ||
+        hasOptionRemovalIntent(heard)
+      )
         return "unsupported";
       patch({
         cart: store.cart.filter((l) => l.name !== action.target),

@@ -17,6 +17,7 @@ import { applyAction } from "@/lib/apply-action";
 import type { DialogState, StaffState } from "@/lib/dialog";
 import {
   applyOptionSpeech,
+  hasOptionRemovalIntent,
   matchCategory,
   matchItem,
   matchMode,
@@ -520,7 +521,8 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       return true;
     }
     const item = matchItem(said);
-    if (item && /빼|취소|삭제|없애/.test(said)) {
+    const wantsOptionRemoval = hasOptionRemovalIntent(said);
+    if (item && !wantsOptionRemoval && /빼|취소|삭제|없애/.test(said)) {
       const has = store.cart.some((l) => l.name === item.name);
       useKioskStore.setState({
         cart: store.cart.filter((l) => l.name !== item.name),
@@ -533,6 +535,34 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     if (/더/.test(said) && !item) {
       store.go("menu");
       return true;
+    }
+    if (store.cart.length) {
+      const targetIdx = item
+        ? store.cart.findIndex((l) => l.name === item.name)
+        : store.cart.length - 1;
+      const idx = targetIdx >= 0 ? targetIdx : store.cart.length - 1;
+      const targetLine = store.cart[idx];
+      const wantsEdit = /(옵션|변경|바꿔|바꾸|수정)/.test(said);
+      if (wantsEdit || !item || (targetIdx >= 0 && wantsOptionRemoval)) {
+        const { draft, hits } = applyOptionSpeech(targetLine.draft, said);
+        // 숫자만 스쳐 지나간 경우는 수정 의도가 명시된 때만 반영한다.
+        const hasOptionChange =
+          hits > 0 &&
+          (wantsEdit || draft.qty === targetLine.draft.qty || hits > 1);
+        if (hasOptionChange && !missingOption(draft)) {
+          const updated = toCartLine(draft);
+          const cart = store.cart.map((line, i) => (i === idx ? updated : line));
+          useKioskStore.setState({
+            cart,
+            say: `${josa(updated.name, "을", "를")} 요청하신 대로 바꿨어요.`,
+          });
+          return true;
+        }
+        if (wantsEdit) {
+          store.editLine(idx);
+          return true;
+        }
+      }
     }
     if (
       !item &&

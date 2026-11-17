@@ -2,7 +2,7 @@ import { actionApiUrl } from "@/lib/action-api";
 
 const TARGET_SAMPLE_RATE = 16000;
 const BUFFER_SIZE = 2048;
-const SPEECH_THRESHOLD = 0.012;
+const SPEECH_THRESHOLD = 0.014;
 const PRE_ROLL_CHUNKS = 5;
 const SILENCE_AFTER_SPEECH_MS = 1000;
 const MAX_SPEECH_MS = 10000;
@@ -209,7 +209,6 @@ class ServerRecognition extends EventTarget implements SpeechRecognition {
       const preRoll: Float32Array[] = [];
       const recorded: Float32Array[] = [];
       let heardSpeech = false;
-      let consecutiveHits = 0;
       const startedAt = Date.now();
       let speechStartedAt = 0;
       let lastVoiceAt = 0;
@@ -226,16 +225,11 @@ class ServerRecognition extends EventTarget implements SpeechRecognition {
           preRoll.push(copy);
           if (preRoll.length > PRE_ROLL_CHUNKS) preRoll.shift();
           if (rms >= SPEECH_THRESHOLD) {
-            consecutiveHits++;
-            if (consecutiveHits >= 2) {
-              heardSpeech = true;
-              speechStartedAt = now;
-              lastVoiceAt = now;
-              recorded.push(...preRoll);
-              preRoll.length = 0;
-            }
-          } else {
-            consecutiveHits = 0;
+            heardSpeech = true;
+            speechStartedAt = now;
+            lastVoiceAt = now;
+            recorded.push(...preRoll);
+            preRoll.length = 0;
           }
         } else {
           recorded.push(copy);
