@@ -397,8 +397,8 @@ function shouldAskServer(s: KioskState, raw: string): boolean {
   )
     return false;
   if (/이전|뒤로|처음|기본모드/.test(said)) return false;
-  return true;
   if (s.screen === "receipt") return false;
+  return true;
 }
 
 /** 인식 실패 1회를 기록하고, FAIL_LIMIT에 닿으면 직원 호출을 제안한다. */
