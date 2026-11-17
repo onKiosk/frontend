@@ -3,75 +3,67 @@
 import { bannerText } from "@/lib/dialog";
 import { useDialogState, useKioskStore } from "@/store/kiosk-store";
 
-const BARS = [0.5, 0.8, 1, 0.7, 0.9, 0.6, 1, 0.75, 0.55];
+type AiBannerProps = {
+  isSpeaking: boolean;
+  onToggleGuidance: () => void;
+};
 
-/** 듣고 있을 때의 파형 */
-function VoiceWave() {
-  return (
-    <div aria-hidden className="flex h-[34px] flex-none items-center gap-[3px]">
-      {BARS.map((height, i) => (
-        <div
-          key={i}
-          className="w-1 rounded-[2px] bg-(--k-banner-fg)"
-          style={{
-            height: 34 * height,
-            animation: `kwave .9s ease-in-out ${i * 0.08}s infinite`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
- * 화면 상단의 AI 안내 배너. 말하는 내용을 그대로 자막으로 띄운다
- * — 음성 안내를 듣지 못하는 사람도 같은 정보를 받게 하려고.
- */
-export function AiBanner({ onToggleListen }: { onToggleListen: () => void }) {
+export function AiBanner({ isSpeaking, onToggleGuidance }: AiBannerProps) {
   const dialog = useDialogState();
-  const listening = useKioskStore((s) => s.listening);
-  const voicePaused = useKioskStore((s) => s.voicePaused);
-  const transcript = useKioskStore((s) => s.transcript);
+  const listening = useKioskStore((state) => state.listening);
+  const transcript = useKioskStore((state) => state.transcript);
+
+  const guidance = bannerText(dialog);
 
   return (
-    <div
-      className="mx-[1.1em] mt-[0.7em] box-border flex min-h-[4.6em] flex-none items-center gap-[0.9em] rounded-[1.1em] bg-(--k-banner) px-[1.1em] py-[0.9em] text-(--k-banner-fg)"
-      role="status"
-      aria-live="polite"
-    >
+    <section className="mx-auto flex w-full items-center gap-4 rounded-xl bg-black px-4 py-3 text-white">
       <div className="min-w-0 flex-1">
-        <div className="mb-[0.25em] text-[0.72em] font-bold opacity-85">
-          {transcript
-            ? `“${transcript}”`
-            : dialog.mode === "voice"
-              ? voicePaused
-                ? "자동 듣기 일시 정지"
-                : "음성 모드 · 안내 후 자동으로 들어요"
-              : "AI 안내 · 음성 + 자막"}
+        <div className="mb-1 flex items-center gap-2 text-xs font-semibold">
+          <span className="text-neutral-400">AI 음성 안내</span>
+          {listening && (
+            <span className="inline-flex items-center gap-1 text-green-300">
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-400"
+              />
+              말씀을 듣고 있어요...
+            </span>
+          )}
         </div>
-        <div className="text-[1.15em] font-bold leading-[1.35] tracking-[-0.02em] text-pretty">
-          {listening ? "듣고 있어요…" : bannerText(dialog)}
-        </div>
+
+        <p className="text-sm font-medium leading-relaxed">{guidance}</p>
+
+        {transcript && (
+          <p className="mt-1 text-xs text-sky-300">
+            인식된 음성: “{transcript}”
+          </p>
+        )}
       </div>
-      {listening && <VoiceWave />}
+
       <button
         type="button"
-        onClick={onToggleListen}
-        aria-pressed={dialog.mode === "voice" ? !voicePaused : listening}
-        className="h-[4.4em] w-[4.4em] flex-none rounded-full border-[1.5px] border-(--k-banner-fg) text-[0.78em] font-bold leading-[1.15]"
-        style={{
-          background: listening ? "var(--k-red)" : "transparent",
-          color: listening ? "#fff" : "var(--k-banner-fg)",
-        }}
+        onClick={onToggleGuidance}
+        aria-label={
+          isSpeaking
+            ? "음성 안내를 멈추고 사용자 음성 듣기"
+            : "멈춘 부분부터 안내 음성 다시 듣기"
+        }
+        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-white bg-black text-center text-xs font-bold text-white transition hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-white/40 active:scale-95"
       >
-        {dialog.mode === "voice"
-          ? voicePaused
-            ? "다시 듣기"
-            : "음성 멈추기"
-          : listening
-            ? "멈추기"
-            : "눌러서 말하기"}
+        {isSpeaking ? (
+          <span className="leading-tight">
+            음성
+            <br />
+            멈춤
+          </span>
+        ) : (
+          <span className="leading-tight">
+            다시
+            <br />
+            듣기
+          </span>
+        )}
       </button>
-    </div>
+    </section>
   );
 }

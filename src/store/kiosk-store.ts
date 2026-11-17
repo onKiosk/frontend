@@ -12,9 +12,12 @@ import {
   type PayKey,
   type ScreenKey,
 } from "@/data/menu";
+import { isActionApiEnabled, requestAction, toContext } from "@/lib/action-api";
+import { applyAction } from "@/lib/apply-action";
 import type { DialogState, StaffState } from "@/lib/dialog";
 import {
   applyOptionSpeech,
+  hasOptionRemovalIntent,
   matchCategory,
   matchItem,
   matchMode,
@@ -23,20 +26,43 @@ import {
   recommendationFor,
 } from "@/lib/intent";
 import { josa, squash } from "@/lib/korean";
+import { addStamps, createOrder } from "@/lib/order-api";
 import {
+  cartCount,
   cartTotal,
+  extrasFor,
   missingOption,
   newDraft,
   optionText,
   stampCount,
   toCartLine,
-  unitWord,
   type CartLine,
   type OptionDraft,
 } from "@/lib/pricing";
 
+const CONFIRM_WORDS =
+  /담아|다마|없어|없습|안할|안해|안넣|아니|괜찮|됐어|그대로|이대로|패스|건너|그냥|결제/;
+
+/**
+ * 필수 옵션(온도·사이즈)은 다 말했지만 추가 옵션(샷·시럽 등)은 아직 말하지 않은 음료.
+ * 바로 담지 않고 옵션 화면에서 추가 옵션을 한 번 안내한다(터치 주문과 같은 흐름).
+ */
+function needsExtrasStep(draft: OptionDraft): boolean {
+  return (
+    !draft.item.dessert &&
+    extrasFor(draft.item).length > 0 &&
+    !Object.values(draft.extras).some(Boolean)
+  );
+}
+
 /** 음성을 이만큼 연속으로 못 알아들으면 직원 호출을 제안한다. */
 export const FAIL_LIMIT = 2;
+
+/** 발화마다 올리는 번호. 더 새로운 발화/리셋이 생기면 이전 서버 응답은 버린다. */
+let utteranceSeq = 0;
+
+/** 주문 저장 요청마다 올리는 번호. 그 사이 리셋되면 이전 요청의 결과는 버린다. */
+let orderSeq = 0;
 
 export interface KioskState {
   screen: ScreenKey;
@@ -48,6 +74,8 @@ export interface KioskState {
   editIndex: number;
   listening: boolean;
   voicePaused: boolean;
+  /** 서버(/api/action) 응답을 기다리는 중 — UI에서 "생각 중" 표시에 쓸 수 있다. */
+  thinking: boolean;
   transcript: string;
   /** 한 번만 띄우는 안내 문구 (있으면 기본 배너 문구를 덮는다) */
   say: string | null;
@@ -58,6 +86,14 @@ export interface KioskState {
   /** 필수 옵션을 더 물어보는 동안 기억하는 음성 결제 수단 */
   pendingPay: PayKey | null;
   orderNo: number;
+  /** 서버가 발급한 주문번호(예: "A042"). 서버를 안 쓰거나 저장에 실패하면 null이고 orderNo(임시 번호)를 보여 준다. */
+  orderNumber: string | null;
+  /** 주문 저장·스탬프 적립 요청 중 (영수증 버튼 중복 클릭 방지) */
+  ordering: boolean;
+  /** 주문 저장 실패 — 완료 화면에서 직원 안내를 보여 준다 */
+  orderFailed: boolean;
+  /** 스탬프 적립 실패 */
+  stampFailed: boolean;
   receipt: boolean;
   stamp: number;
   /** 추천 배지를 달 메뉴 이름 */
@@ -90,15 +126,19 @@ export interface KioskActions {
   closeStaff: () => void;
   setListening: (listening: boolean) => void;
   setTranscript: (transcript: string) => void;
-  /** 발화 한 건을 처리한다. 못 알아들으면 실패 카운트를 올린다. */
-  handleUtterance: (text: string) => void;
+  /**
+   * 발화 한 건을 처리한다. 못 알아들으면 실패 카운트를 올린다.
+   * 서버를 쓰는 발화는 Promise를 돌려준다(SpeechSession이 끝날 때까지 듣기를 미룬다).
+   * 서버 미설정/로컬 처리 발화는 이전처럼 동기로 끝나고 undefined를 돌려준다.
+   */
+  handleUtterance: (text: string) => void | Promise<void>;
   noteVoiceError: (message: string) => void;
 }
 
 export type KioskStore = KioskState & KioskActions;
 
 const INITIAL: KioskState = {
-  screen: "start",
+  screen: "menu",
   mode: "basic",
   cat: "coffee",
   cart: [],
@@ -106,6 +146,7 @@ const INITIAL: KioskState = {
   editIndex: -1,
   listening: false,
   voicePaused: false,
+  thinking: false,
   transcript: "",
   say: null,
   fails: 0,
@@ -114,28 +155,14 @@ const INITIAL: KioskState = {
   pay: null,
   pendingPay: null,
   orderNo: 0,
+  orderNumber: null,
+  ordering: false,
+  orderFailed: false,
+  stampFailed: false,
   receipt: false,
   stamp: 0,
   recommended: null,
 };
-
-/** 데모용 시드 장바구니 — 단계 이동 버튼으로 중간 화면을 바로 볼 때 채운다. */
-function seedCart(): CartLine[] {
-  const latte: OptionDraft = {
-    ...newDraft(MENU_ITEMS[1]),
-    temp: "hot",
-    size: "regular",
-    qty: 2,
-  };
-  const americano: OptionDraft = {
-    ...newDraft(MENU_ITEMS[0]),
-    temp: "ice",
-    size: "large",
-    ice: "less",
-  };
-  const cake = newDraft(findMenuItem("치즈케이크")!);
-  return [latte, americano, cake].map(toCartLine);
-}
 
 export const useKioskStore = create<KioskStore>((set, get) => ({
   ...INITIAL,
@@ -145,24 +172,14 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   },
 
   reset: () => {
+    utteranceSeq++; // 진행 중인 서버 응답은 버린다
+    orderSeq++; // 진행 중인 주문 저장 결과도 버린다
     set({ ...INITIAL, mode: get().mode, voicePaused: get().voicePaused });
   },
 
   jump: (screen) => {
-    if (screen === "start") {
-      get().reset();
-      return;
-    }
-    const { cart, draft } = get();
+    if (screen === "done") return;
     const patch: Partial<KioskState> = {};
-    if (screen === "option" && !draft) {
-      patch.draft = newDraft(MENU_ITEMS[1]);
-      patch.editIndex = -1;
-    }
-    if (["cart", "point", "pay", "done"].includes(screen) && !cart.length) {
-      patch.cart = seedCart();
-    }
-    if (screen === "done") patch.orderNo = 127;
     get().go(screen, patch);
   },
 
@@ -172,11 +189,6 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
       mode === "voice"
         ? "음성 모드예요. 말로만 주문할 수 있어요. 드실 메뉴를 말씀해 주세요."
         : `${josa(label, "으로", "로")} 바꿨어요.`;
-    if (get().screen === "start") {
-      get().go("menu", { mode });
-      set({ say });
-      return;
-    }
     set({ mode, say });
   },
 
@@ -248,10 +260,9 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     }
 
     const changed = state.editIndex >= 0;
-    const opt = line.opt ? ` ${line.opt.split(" · ").join(" ")}` : "";
     get().go("menu", { cart, cat: draft.item.cat, draft: null, editIndex: -1 });
     set({
-      say: `${line.name}${opt} ${line.qty}${unitWord(draft.item)} ${
+      say: `총 ${cartCount(cart)}잔 ${
         changed ? "으로 바꿨어요" : "담았어요"
       }. 더 필요하신 게 있나요?`,
     });
@@ -283,9 +294,14 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   clearCart: () => set({ cart: [], say: "장바구니를 모두 비웠어요." }),
 
   confirmCart: () => {
-    if (get().cart.length) get().go("point");
-  },
+    if (!get().cart.length) return;
 
+    if (get().phone) {
+      get().go("pay");
+    } else {
+      get().go("point");
+    }
+  },
   pressPhoneKey: (key) => {
     const phone = get().phone;
     const next =
@@ -322,11 +338,23 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
     set({ say: "결제를 취소했어요. 결제 수단을 다시 골라 주세요." });
   },
 
-  finish: (receipt) =>
-    get().go("done", {
-      receipt,
-      orderNo: 100 + Math.floor(Math.random() * 900),
-    }),
+  finish: (receipt) => {
+    if (get().ordering) return;
+    const { pay } = get();
+    const localNo = 100 + Math.floor(Math.random() * 900);
+    if (!isActionApiEnabled() || !pay) {
+      // 서버를 안 쓰면 이전처럼 임시 번호로 완료 화면을 보여 준다.
+      get().go("done", {
+        receipt,
+        orderNo: localNo,
+        orderNumber: null,
+        cart: [],
+      });
+      return;
+    }
+    set({ ordering: true });
+    void submitOrder(receipt, pay, localNo, ++orderSeq);
+  },
 
   callStaff: () => set({ staff: "called" }),
   closeStaff: () => set({ staff: null }),
@@ -337,17 +365,96 @@ export const useKioskStore = create<KioskStore>((set, get) => ({
   noteVoiceError: (message) => set({ listening: false, say: message }),
 
   handleUtterance: (text) => {
-    set({ transcript: text });
-    const understood = resolveIntent(get, text);
-    if (understood) {
-      set({ fails: 0 });
+    utteranceSeq++; // 이전 발화의 서버 응답이 아직 오는 중이면 버려지게 한다
+    set({ transcript: text, thinking: false });
+    if (!shouldAskServer(get(), text)) {
+      localUtterance(text);
       return;
     }
-    const fails = get().fails + 1;
-    if (fails >= FAIL_LIMIT) set({ fails: 0, staff: "fail" });
-    else set({ fails, say: "잘 알아듣지 못했어요. 다시 한 번 말씀해 주세요." });
+    return askServer(text);
   },
 }));
+
+/**
+ * 서버(LLM)를 거칠 발화인가. false면 기존 규칙(resolveIntent)만 쓴다.
+ * - 서버 미설정(NEXT_PUBLIC_ACTION_API_URL 없음)이면 항상 로컬 → 웹 데모/기존 동작 그대로
+ * - 결제 대기 중: 결제 취소만 받으면 되므로 로컬
+ * - 적립 화면의 숫자 발화: 전화번호를 LLM/로그로 보내지 않는다(개인정보 정책)
+ * - 옵션 화면(draft 진행 중): 데이터셋에 draft 키가 없으므로 기존 규칙으로 이어서 처리
+ * - 장바구니/결제 화면에서 "더 담을게" 등 추가 주문 의도: 서버 Action 밖의 명령이므로 로컬
+ * - 이전/뒤로/처음/기본 모드: 서버 Action 밖의 명령
+ * - 영수증 선택: 예/아니오만 받으므로 로컬
+ * - 적립 화면: 숫자 발화는 개인정보라 서버로 보내지 않고, 건너뛰기·결제 수단 말하기도 로컬로 처리
+ */
+function shouldAskServer(s: KioskState, raw: string): boolean {
+  if (!isActionApiEnabled()) return false;
+  const said = squash(raw);
+  if (s.screen === "paying") return false;
+  if (s.screen === "point") return false;
+  if (s.screen === "option" && s.draft) return false;
+  if (
+    (s.screen === "cart" || s.screen === "pay") &&
+    /더/.test(said) &&
+    !matchItem(said)
+  )
+    return false;
+  if (/이전|뒤로|처음|기본모드/.test(said)) return false;
+  if (s.screen === "receipt" || s.screen === "done") return false;
+  return true;
+}
+
+/** 인식 실패 1회를 기록하고, FAIL_LIMIT에 닿으면 직원 호출을 제안한다. */
+function recordFailure() {
+  const fails = useKioskStore.getState().fails + 1;
+  if (fails >= FAIL_LIMIT) useKioskStore.setState({ fails: 0, staff: "fail" });
+  else
+    useKioskStore.setState({
+      fails,
+      say: "잘 알아듣지 못했어요. 다시 한 번 말씀해 주세요.",
+    });
+}
+
+/** 기존 규칙(resolveIntent)으로 처리 — 서버를 쓰지 않을 때와 서버 폴백 때 공통 */
+function localUtterance(text: string) {
+  if (resolveIntent(useKioskStore.getState, text)) {
+    useKioskStore.setState({ fails: 0 });
+    return;
+  }
+  recordFailure();
+}
+
+/**
+ * 서버에 물어 Action을 받아 화면에 반영한다.
+ * - 서버 실패(타임아웃/오류/검증 실패) → 기존 규칙으로 폴백. 서버가 no_action을 주면 폴백하지 않는다.
+ * - 기다리는 사이 더 새로운 발화/리셋/화면 전환이 있었으면 응답을 버린다.
+ */
+async function askServer(text: string): Promise<void> {
+  const seq = utteranceSeq; // handleUtterance가 이미 올려 둔 번호
+  const before = useKioskStore.getState();
+  useKioskStore.setState({ thinking: true });
+
+  const result = await requestAction(text, toContext(before));
+
+  if (seq !== utteranceSeq) return; // 더 새로운 발화(또는 리셋)가 이미 처리됨
+  useKioskStore.setState({ thinking: false });
+  const now = useKioskStore.getState();
+  if (now.screen !== before.screen) return; // 기다리는 사이 화면이 바뀜(터치 등)
+
+  if (result.kind === "fallback") {
+    localUtterance(text);
+    return;
+  }
+  const outcome = applyAction(
+    result.action,
+    now,
+    useKioskStore.setState,
+    text,
+    result.answerText,
+  );
+  if (outcome === "handled") useKioskStore.setState({ fails: 0 });
+  else if (outcome === "unrecognized") recordFailure();
+  else localUtterance(text); // 서버 Action은 맞지만 이 화면/메뉴에서 실행 불가 → 기존 규칙
+}
 
 /**
  * 발화 → 상태 변경. 처리했으면 true.
@@ -388,9 +495,21 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       orderByVoice(store, item, said);
       return true;
     }
+    const wasMissing = missingOption(store.draft);
     const { draft, hits } = applyOptionSpeech(store.draft, said);
     const pay = matchPay(said);
-    if (hits || pay || /담아|없어|괜찮|됐어|그대로|이대로|결제/.test(said)) {
+    const confirmWords = CONFIRM_WORDS.test(said);
+    if (hits || pay || confirmWords) {
+      if (
+        wasMissing !== null &&
+        missingOption(draft) === null &&
+        needsExtrasStep(draft) &&
+        !confirmWords &&
+        !pay
+      ) {
+        useKioskStore.setState({ draft, say: null });
+        return true;
+      }
       completeVoiceOrder(store, draft, pay ?? store.pendingPay);
       return true;
     }
@@ -402,7 +521,8 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       return true;
     }
     const item = matchItem(said);
-    if (item && /빼|취소|삭제|없애/.test(said)) {
+    const wantsOptionRemoval = hasOptionRemovalIntent(said);
+    if (item && !wantsOptionRemoval && /빼|취소|삭제|없애/.test(said)) {
       const has = store.cart.some((l) => l.name === item.name);
       useKioskStore.setState({
         cart: store.cart.filter((l) => l.name !== item.name),
@@ -416,9 +536,42 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       store.go("menu");
       return true;
     }
+    if (store.cart.length) {
+      const targetIdx = item
+        ? store.cart.findIndex((l) => l.name === item.name)
+        : store.cart.length - 1;
+      const idx = targetIdx >= 0 ? targetIdx : store.cart.length - 1;
+      const targetLine = store.cart[idx];
+      const wantsEdit = /(옵션|변경|바꿔|바꾸|수정)/.test(said);
+      if (wantsEdit || !item || (targetIdx >= 0 && wantsOptionRemoval)) {
+        const { draft, hits } = applyOptionSpeech(targetLine.draft, said);
+        // 숫자만 스쳐 지나간 경우는 수정 의도가 명시된 때만 반영한다.
+        const hasOptionChange =
+          hits > 0 &&
+          (wantsEdit || draft.qty === targetLine.draft.qty || hits > 1);
+        if (hasOptionChange && !missingOption(draft)) {
+          const updated = toCartLine(draft);
+          const cart = store.cart.map((line, i) =>
+            i === idx ? updated : line,
+          );
+          useKioskStore.setState({
+            cart,
+            say: `${josa(updated.name, "을", "를")} 요청하신 대로 바꿨어요.`,
+          });
+          return true;
+        }
+        if (wantsEdit) {
+          store.editLine(idx);
+          return true;
+        }
+      }
+    }
     if (
       !item &&
-      (matchPay(said) || /네|맞아|주문|결제|응/.test(said)) &&
+      (matchPay(said) ||
+        /네|내|예|맞아|맞습|맞는|좋아|그래|이대로|그대로|주문|결제|응/.test(
+          said,
+        )) &&
       store.cart.length
     ) {
       checkoutByVoice(store, matchPay(said));
@@ -434,7 +587,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
       if (pay) store.startPay(pay);
       return true;
     }
-    if (/안|건너|괜찮|없/.test(said)) {
+    if (/안|않|건너|괜찮|없|아니|말고|싫|넘어|스킵/.test(said)) {
       store.skipPoint();
       const pay = matchPay(said);
       if (pay) store.startPay(pay);
@@ -449,17 +602,22 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   }
 
   if (screen === "receipt") {
-    if (/아니|안|괜찮|필요없/.test(said)) {
+    if (/아니|안|않|괜찮|필요없|말고|싫/.test(said)) {
       store.finish(false);
       return true;
     }
-    if (/네|출력|뽑|주세요/.test(said)) {
+    if (/네|응|예|출력|뽑|인쇄|주세요|해줘|좋아/.test(said)) {
       store.finish(true);
       return true;
     }
   }
 
-  if (screen === "done" && /처음/.test(said)) {
+  if (
+    screen === "done" &&
+    /처음|첨으로|메뉴|다시|알았|알겠|고마|감사|확인|완료|끝|네|응|주문/.test(
+      said,
+    )
+  ) {
     store.reset();
     return true;
   }
@@ -475,7 +633,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     return true;
   }
 
-  if (["start", "menu", "option", "cart", "pay"].includes(screen)) {
+  if (["menu", "option", "cart", "pay"].includes(screen)) {
     const item = matchItem(said);
     if (item) {
       orderByVoice(store, item, said);
@@ -492,6 +650,10 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     }
     if (screen === "pay" && /이전|뒤로/.test(said)) {
       store.go("cart");
+      return true;
+    }
+    if (screen === "pay" && /더/.test(said) && !item) {
+      store.go("menu");
       return true;
     }
     const cat = matchCategory(said);
@@ -512,7 +674,7 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   return false;
 }
 
-/** 말로 메뉴를 주문했을 때 — 옵션까지 다 말했으면 바로 담는다. */
+/** 말로 메뉴를 주문했을 때 — 필수·추가 옵션까지 다 말했으면 바로 담는다. */
 function orderByVoice(store: KioskStore, item: MenuItem, said: string) {
   if (item.soldout) {
     store.tapItem(item);
@@ -520,9 +682,20 @@ function orderByVoice(store: KioskStore, item: MenuItem, said: string) {
   }
   const base: OptionDraft = { ...newDraft(item), qty: parseQty(said) };
   const { draft } = applyOptionSpeech(base, said);
+  const pay = matchPay(said);
+  const confirmWords = CONFIRM_WORDS.test(said);
   // 새 메뉴는 기존 장바구니 수정 상태를 이어받지 않는다.
   store.go("option", { draft, editIndex: -1 });
-  completeVoiceOrder(useKioskStore.getState(), draft, matchPay(said));
+  if (
+    !missingOption(draft) &&
+    needsExtrasStep(draft) &&
+    !confirmWords &&
+    !pay
+  ) {
+    useKioskStore.setState({ draft, pendingPay: null, say: null });
+    return;
+  }
+  completeVoiceOrder(useKioskStore.getState(), draft, pay);
 }
 
 function completeVoiceOrder(
@@ -535,7 +708,58 @@ function completeVoiceOrder(
     return;
   }
   store.addDraftToCart(draft);
-  checkoutByVoice(useKioskStore.getState(), pay);
+
+  // 발화에 결제 수단까지 함께 말한 경우에만 바로 결제로 이동하고,
+  // 그렇지 않으면 장바구니 화면으로 이동해 담은 메뉴를 먼저 확인시켜 준다.
+  if (pay) {
+    checkoutByVoice(useKioskStore.getState(), pay);
+  } else {
+    useKioskStore.getState().go("cart");
+  }
+}
+
+/**
+ * 영수증 선택 뒤: 주문을 서버에 저장하고(주문번호 발급) 스탬프를 적립한 다음 완료 화면으로 간다.
+ * 서버가 실패해도 완료 화면은 보여 주되 orderFailed/stampFailed로 직원 안내를 띄운다.
+ */
+async function submitOrder(
+  receipt: boolean,
+  pay: PayKey,
+  localNo: number,
+  seq: number,
+) {
+  const { cart, phone, stamp } = useKioskStore.getState();
+  const order = await createOrder(cart, pay, receipt);
+  if (seq !== orderSeq) return; // 그 사이 처음으로 돌아갔다
+
+  let stampFailed = false;
+  if (phone && stamp > 0) {
+    if (order.kind === "ok") {
+      const result = await addStamps(phone, stamp);
+      if (seq !== orderSeq) return;
+      stampFailed = result.kind === "fail";
+    } else {
+      stampFailed = true;
+    }
+  }
+
+  if (order.kind === "ok" && order.total !== null) {
+    if (order.total !== cartTotal(cart)) {
+      console.warn("서버 계산 총액이 화면 합계와 다릅니다", order.total);
+    }
+  }
+  const serverNo =
+    order.kind === "ok" ? Number(order.orderNumber.replace(/\D/g, "")) : 0;
+  useKioskStore.getState().go("done", {
+    receipt,
+    orderNo: serverNo > 0 ? serverNo : localNo,
+    orderNumber: order.kind === "ok" ? order.orderNumber : null,
+    orderFailed: order.kind === "fail",
+    stampFailed,
+    ordering: false,
+    phone: "", // 적립이 끝났으니 전화번호는 화면 상태에서 지운다
+    cart: [], // 주문 완료 시 장바구니도 함께 비운다
+  });
 }
 
 function checkoutByVoice(store: KioskStore, pay: PayKey | null) {
@@ -545,8 +769,13 @@ function checkoutByVoice(store: KioskStore, pay: PayKey | null) {
     });
     return;
   }
-  if (pay) store.startPay(pay);
-  else store.go("pay", { pay: null });
+  if (pay) {
+    store.startPay(pay);
+  } else if (store.screen === "cart") {
+    store.go("point");
+  } else {
+    store.go("cart");
+  }
 }
 
 /** 파생값 셀렉터 */
@@ -566,5 +795,6 @@ export const useDialogState = () =>
       say: s.say,
       pay: s.pay,
       orderNo: s.orderNo,
+      orderNumber: s.orderNumber,
     })),
   );
