@@ -89,6 +89,9 @@ export const ALIASES: [string, string][] = [
   ["케이크", "치즈케이크"],
   ["쿠키", "초코쿠키"],
   ["라떼", "카페라떼"],
+  ["라때", "카페라떼"],
+  ["나떼", "카페라떼"],
+  ["네모네이드", "레몬에이드"],
 ];
 
 export const EXTRAS: { key: ExtraKey; label: string; price: number }[] = [

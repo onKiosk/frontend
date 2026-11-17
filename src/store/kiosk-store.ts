@@ -39,7 +39,8 @@ import {
   type OptionDraft,
 } from "@/lib/pricing";
 
-const CONFIRM_WORDS = /담아|없어|괜찮|됐어|그대로|이대로|결제/;
+const CONFIRM_WORDS =
+  /담아|다마|없어|없습|안할|안해|안넣|아니|괜찮|됐어|그대로|이대로|패스|건너|그냥|결제/;
 
 /**
  * 필수 옵션(온도·사이즈)은 다 말했지만 추가 옵션(샷·시럽 등)은 아직 말하지 않은 음료.
@@ -535,7 +536,10 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
     }
     if (
       !item &&
-      (matchPay(said) || /네|맞아|주문|결제|응/.test(said)) &&
+      (matchPay(said) ||
+        /네|내|예|맞아|맞습|맞는|좋아|그래|이대로|그대로|주문|결제|응/.test(
+          said,
+        )) &&
       store.cart.length
     ) {
       checkoutByVoice(store, matchPay(said));

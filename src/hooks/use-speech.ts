@@ -1,9 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isActionApiEnabled } from "@/lib/action-api";
 import { spokenText, staffTexts } from "@/lib/dialog";
+import {
+  createServerRecognition,
+  speakWithServer,
+  type SpeakFn,
+} from "@/lib/speech-api";
 import { SpeechSession } from "@/lib/speech-session";
 import { useKioskStore } from "@/store/kiosk-store";
+
+const browserSpeak: SpeakFn = (text, done, onBoundary) => {
+  if (!window.speechSynthesis) {
+    done();
+    return () => {};
+  }
+
+  // 이전 잔여 발화 안전 정리
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+
+  utterance.lang = "ko-KR";
+  utterance.rate = 1.05;
+  utterance.onboundary = (event) => {
+    if (typeof event.charIndex === "number") {
+      onBoundary?.(event.charIndex);
+    }
+  };
+  utterance.onend = done;
+  utterance.onerror = done;
+
+  window.speechSynthesis.speak(utterance);
+
+  return () => {
+    utterance.onboundary = null;
+    utterance.onend = null;
+    utterance.onerror = null;
+
+    window.speechSynthesis.cancel();
+  };
+};
 
 /** 모든 모드에서 안내가 끝날 때마다 다음 발화를 자동으로 기다린다. */
 export function useSpeech({
@@ -15,43 +53,19 @@ export function useSpeech({
   useEffect(() => {
     const controller = new SpeechSession({
       createRecognition: () => {
+        if (isActionApiEnabled()) {
+          return createServerRecognition();
+        }
         const Recognition =
           window.SpeechRecognition ?? window.webkitSpeechRecognition;
 
         return Recognition ? new Recognition() : null;
       },
 
-      speak: (text, done, onBoundary) => {
-        if (!window.speechSynthesis) {
-          done();
-          return () => {};
-        }
-
-        // 이전 잔여 발화 안전 정리
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        utterance.lang = "ko-KR";
-        utterance.rate = 1.05;
-        utterance.onboundary = (event) => {
-          if (typeof event.charIndex === "number") {
-            onBoundary?.(event.charIndex);
-          }
-        };
-        utterance.onend = done;
-        utterance.onerror = done;
-
-        window.speechSynthesis.speak(utterance);
-
-        return () => {
-          utterance.onboundary = null;
-          utterance.onend = null;
-          utterance.onerror = null;
-
-          window.speechSynthesis.cancel();
-        };
-      },
+      speak: (text, done, onBoundary) =>
+        isActionApiEnabled()
+          ? speakWithServer(text, done, onBoundary, browserSpeak)
+          : browserSpeak(text, done, onBoundary),
 
       onSpeaking: (speaking) => setIsSpeaking(speaking),
 

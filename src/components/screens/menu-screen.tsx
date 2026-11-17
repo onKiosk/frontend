@@ -16,7 +16,6 @@ const photoStyle = {
 export function MenuScreen() {
   const cat = useKioskStore((s) => s.cat);
   const mode = useKioskStore((s) => s.mode);
-  const transcript = useKioskStore((s) => s.transcript);
   const recommended = useKioskStore((s) => s.recommended);
   const setCategory = useKioskStore((s) => s.setCategory);
   const tapItem = useKioskStore((s) => s.tapItem);
@@ -26,15 +25,6 @@ export function MenuScreen() {
 
   return (
     <div className="flex flex-col gap-[0.8em] px-[1.1em] py-[0.9em]">
-      <div
-        className="min-h-[1.4em] rounded-[1em] border-[1.5px] border-(--k-edge) bg-(--k-soft) px-[1em] py-[0.7em] text-[1em] font-bold"
-        style={{ color: transcript ? "var(--k-fg)" : "var(--k-sub)" }}
-      >
-        {transcript
-          ? `“${transcript}”`
-          : "“아메리카노 하나 주세요”처럼 말해 보세요"}
-      </div>
-
       <div className="flex gap-[0.35em]" role="tablist" aria-label="메뉴 종류">
         {CATEGORIES.map((c) => (
           <SelectButton

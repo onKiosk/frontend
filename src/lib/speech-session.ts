@@ -407,7 +407,6 @@ export class SpeechSession {
         this.schedule();
       };
 
-      this.options.onTranscript("");
       this.options.onListening(true);
 
       engine.start();

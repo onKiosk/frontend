@@ -18,17 +18,24 @@ export function AiBanner({ isSpeaking, onToggleGuidance }: AiBannerProps) {
   return (
     <section className="mx-auto flex w-full items-center gap-4 rounded-xl bg-black px-4 py-3 text-white">
       <div className="min-w-0 flex-1">
-        <p className="mb-1 text-xs font-semibold text-neutral-400">
-          AI 음성 안내
-        </p>
+        <div className="mb-1 flex items-center gap-2 text-xs font-semibold">
+          <span className="text-neutral-400">AI 음성 안내</span>
+          {listening && (
+            <span className="inline-flex items-center gap-1 text-green-300">
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-400"
+              />
+              말씀을 듣고 있어요...
+            </span>
+          )}
+        </div>
 
         <p className="text-sm font-medium leading-relaxed">{guidance}</p>
 
-        {listening && (
-          <p className="mt-1 text-xs text-green-300">
-            {transcript
-              ? `인식된 음성: ${transcript}`
-              : "말씀을 듣고 있어요..."}
+        {transcript && (
+          <p className="mt-1 text-xs text-sky-300">
+            인식된 음성: “{transcript}”
           </p>
         )}
       </div>

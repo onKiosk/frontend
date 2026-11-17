@@ -115,19 +115,23 @@ export function applyOptionSpeech(
   }
   if (item.dessert) return { draft: next, hits };
 
-  if (!item.iceOnly && /따뜻|뜨겁|뜨거|핫|hot/i.test(said)) {
+  if (!item.iceOnly && /따뜻|따듯|뜨겁|뜨거|핫|hot/i.test(said)) {
     next.temp = "hot";
     hits++;
   }
-  if (/차갑|차가|아이스|ice|시원|아아/i.test(said)) {
+  if (/차갑|차가|아이스|아이수|ice|시원|아아/i.test(said)) {
     next.temp = "ice";
     hits++;
   }
-  if (/라지|큰거|큰걸|큰사이즈|크게/.test(said)) {
+  if (
+    /라지|낮지|낮으로|낮이|나지(?:주세요|주|요|로|할게|$)|큰거|큰걸|큰사이즈|크게/.test(
+      said,
+    )
+  ) {
     next.size = "large";
     hits++;
   }
-  if (/레귤러|작은|기본사이즈/.test(said)) {
+  if (/[레네내][귤글길][러로]|귤[러로]|보통|기본|작은|스몰/.test(said)) {
     next.size = "regular";
     hits++;
   }
