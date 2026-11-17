@@ -52,28 +52,26 @@ export function ReceiptFooter() {
   );
 }
 
-export function DoneScreen() {
+export function DoneScreen({ isSpeaking = false }: { isSpeaking?: boolean }) {
   const orderNo = useKioskStore((s) => s.orderNo);
   const orderNumber = useKioskStore((s) => s.orderNumber);
   const orderFailed = useKioskStore((s) => s.orderFailed);
   const stampFailed = useKioskStore((s) => s.stampFailed);
   const receipt = useKioskStore((s) => s.receipt);
   const stamp = useKioskStore((s) => s.stamp);
-  const listening = useKioskStore((s) => s.listening);
   const transcript = useKioskStore((s) => s.transcript);
   const say = useKioskStore((s) => s.say);
   const staff = useKioskStore((s) => s.staff);
   const reset = useKioskStore((s) => s.reset);
 
   useEffect(() => {
-    if (staff !== null) return;
-    // 안내 음성이 끝나고 듣기 상태가 시작된 뒤 5초간 반응이 없으면 메뉴판으로 복귀한다.
-    const delay = listening ? 5000 : 10000;
+    if (isSpeaking || staff !== null) return;
+    // 안내 음성이 완전히 끝난 시점부터 5초간 반응이 없으면 메뉴판으로 자동 복귀한다.
     const timer = setTimeout(() => {
       reset();
-    }, delay);
+    }, 5000);
     return () => clearTimeout(timer);
-  }, [listening, transcript, say, staff, reset]);
+  }, [isSpeaking, transcript, say, staff, reset]);
 
   const notes = [
     // 주문 저장에 실패했으면 영수증 안내는 숨기고 실패 안내만 보여 준다.

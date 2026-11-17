@@ -82,7 +82,7 @@ export function KioskFrame({
       )}
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-auto">
-        <ScreenBody />
+        <ScreenBody isSpeaking={isSpeaking} />
       </div>
 
       <div className="flex flex-none flex-col gap-[0.55em] border-t border-(--k-line) bg-(--k-surface) px-[1.1em] py-[0.8em]">
@@ -115,7 +115,7 @@ export function KioskFrame({
   );
 }
 
-function ScreenBody() {
+function ScreenBody({ isSpeaking }: { isSpeaking: boolean }) {
   const screen = useKioskStore((s) => s.screen);
 
   switch (screen) {
@@ -134,7 +134,7 @@ function ScreenBody() {
     case "receipt":
       return <ReceiptScreen />;
     case "done":
-      return <DoneScreen />;
+      return <DoneScreen isSpeaking={isSpeaking} />;
   }
 }
 
