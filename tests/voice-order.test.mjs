@@ -347,3 +347,13 @@ test("우유 변경 옵션도 일반 우유/빼기 말로 해제할 수 있고 �
   say("우유 변경 빼줘");
   assert.equal(state().cart[0].draft.extras.milk, false);
 });
+
+test("콜드브루 오인식 변형 발화도 품절 안내로 연결된다", () => {
+  say("콜드블루 한잔 주세요.");
+  assert.equal(state().screen, "menu");
+  assert.match(state().say, /콜드브루.*품절/);
+
+  say("홀드브 한잔 주세요.");
+  assert.equal(state().screen, "menu");
+  assert.match(state().say, /콜드브루.*품절/);
+});
