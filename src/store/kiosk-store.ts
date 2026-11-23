@@ -19,6 +19,7 @@ import {
   applyOptionSpeech,
   hasOptionRemovalIntent,
   matchCategory,
+  matchCategoryBrowse,
   matchItem,
   matchMode,
   matchPay,
@@ -399,6 +400,7 @@ function shouldAskServer(s: KioskState, raw: string): boolean {
   )
     return false;
   if (/이전|뒤로|처음|기본모드/.test(said)) return false;
+  if (matchCategoryBrowse(said)) return false;
   if (s.screen === "receipt" || s.screen === "done") return false;
   return true;
 }
@@ -488,6 +490,11 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   if (screen === "option" && store.draft) {
     if (/이전|뒤로/.test(said)) {
       store.go("menu");
+      return true;
+    }
+    const browseCat = matchCategoryBrowse(said);
+    if (browseCat) {
+      store.go("menu", { cat: browseCat });
       return true;
     }
     const item = matchItem(said);
@@ -634,6 +641,11 @@ function resolveIntent(get: () => KioskStore, raw: string): boolean {
   }
 
   if (["menu", "option", "cart", "pay"].includes(screen)) {
+    const browseCat = screen !== "cart" ? matchCategoryBrowse(said) : null;
+    if (browseCat) {
+      store.go("menu", { cat: browseCat });
+      return true;
+    }
     const item = matchItem(said);
     if (item) {
       orderByVoice(store, item, said);

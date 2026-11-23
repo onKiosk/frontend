@@ -397,3 +397,146 @@ test("전 메뉴의 대표 STT 오인식 변형도 올바른 메뉴로 연결된
   say("초코쿠 주세요");
   assert.equal(state().cart.at(-1).name, "초코쿠키");
 });
+
+test("카테고리 탐색 발화(라떼 보여줘 등)는 메뉴판 탭 전환으로 우선 처리되고, 라떼 주세요는 카페라떼로 연결된다", () => {
+  say("라떼 보여줘");
+  assert.equal(state().screen, "menu");
+  assert.equal(state().cat, "latte");
+
+  say("차 메뉴판 보여줘");
+  assert.equal(state().screen, "menu");
+  assert.equal(state().cat, "tea");
+
+  say("라떼 주세요");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "카페라떼");
+
+  say("아니 라떼 메뉴판 보여달라고");
+  assert.equal(state().screen, "menu");
+  assert.equal(state().cat, "latte");
+});
+
+test("실마이크 로그에서 확인된 메뉴 오인식 및 옵션 변형이 정확히 반영된다", () => {
+  say("녹차았대");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "녹차라떼");
+  say("따뜻하게 레귤러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).name, "녹차라떼");
+
+  say("녹 녹차라대");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "녹차라떼");
+  say("차갑게 레굴러");
+  say("담아 주세요");
+  assert.equal(state().cart.at(-1).draft.size, "regular");
+
+  say("녹차았떼");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "녹차라떼");
+  say("담아 주세요");
+
+  say("캐머마일");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "캐모마일");
+  say("담아 주세요");
+
+  say("파닐라 라떼");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "바닐라라떼");
+  say("담아 주세요");
+
+  say("차몽에이드");
+  assert.equal(state().screen, "option");
+  assert.equal(state().draft.item.name, "자몽에이드");
+  say("담아 주세요");
+
+  say("테이글");
+  assert.equal(state().cart.at(-1).name, "베이글");
+
+  say("체즈 케이크");
+  assert.equal(state().cart.at(-1).name, "치즈케이크");
+
+  say("카페라떼");
+  say("따뜻하하게 하지");
+  assert.equal(state().draft.temp, "hot");
+  assert.equal(state().draft.size, "large");
+
+  say("얼음 양 만이 샤추 시럽추 연하하게 우유변경");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.temp, "ice");
+  assert.equal(state().cart.at(-1).draft.ice, "more");
+  assert.equal(state().cart.at(-1).draft.extras.shot, true);
+  assert.equal(state().cart.at(-1).draft.extras.syrup, true);
+  assert.equal(state().cart.at(-1).draft.extras.light, true);
+  assert.equal(state().cart.at(-1).draft.extras.milk, true);
+
+  say("아메리카노");
+  say("창악대 라지");
+  assert.equal(state().draft.temp, "ice");
+  assert.equal(state().draft.size, "large");
+
+  say("얼음 없이 셔추가 시업추 연하게 우유 변경경");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.ice, "none");
+  assert.equal(state().cart.at(-1).draft.extras.shot, true);
+  assert.equal(state().cart.at(-1).draft.extras.syrup, true);
+  assert.equal(state().cart.at(-1).draft.extras.light, true);
+  assert.equal(state().cart.at(-1).draft.extras.milk, undefined);
+
+  say("파닐랄떼");
+  assert.equal(state().draft.item.name, "바닐라라떼");
+  say("바닐날 어때?");
+  assert.equal(state().draft.item.name, "바닐라라떼");
+  say("파파치노");
+  assert.equal(state().draft.item.name, "카푸치노");
+  say("치노");
+  assert.equal(state().draft.item.name, "카푸치노");
+  say("카테모카");
+  assert.equal(state().draft.item.name, "카페모카");
+  say("차갑게 레귤러");
+  say("샤츠가 시합 추가");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.extras.shot, true);
+  assert.equal(state().cart.at(-1).draft.extras.syrup, true);
+
+  say("콜트브루");
+  assert.equal(state().screen, "menu");
+  assert.match(state().say, /콜드브루.*품절/);
+
+  say("페모카");
+  assert.equal(state().draft.item.name, "카페모카");
+  say("차악계 라지");
+  assert.equal(state().draft.temp, "ice");
+  assert.equal(state().draft.size, "large");
+
+  say("아메리카노");
+  say("차갑대 라.");
+  assert.equal(state().draft.temp, "ice");
+  assert.equal(state().draft.size, "large");
+  say("얼음 양 작게 시럽 추가 연하하게.");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.ice, "less");
+  assert.equal(state().cart.at(-1).draft.extras.syrup, true);
+  assert.equal(state().cart.at(-1).draft.extras.light, true);
+
+  say("고데비 모드.");
+  assert.equal(state().mode, "contrast");
+  say("기본모드");
+  assert.equal(state().mode, "basic");
+  say("코데비보드.");
+  assert.equal(state().mode, "contrast");
+
+  say("아메리카노");
+  say("라지 얼음 양 아니 샤추가.");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.ice, "more");
+  assert.equal(state().cart.at(-1).draft.extras.shot, true);
+
+  say("아메리카노");
+  say("레귤러 얼음 양섞 게 셔추가.");
+  assert.equal(state().screen, "cart");
+  assert.equal(state().cart.at(-1).draft.size, "regular");
+  assert.equal(state().cart.at(-1).draft.ice, "less");
+  assert.equal(state().cart.at(-1).draft.extras.shot, true);
+});

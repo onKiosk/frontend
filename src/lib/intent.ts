@@ -32,14 +32,26 @@ export function matchItem(said: string): MenuItem | null {
 }
 
 export function matchCategory(said: string): CategoryKey | null {
-  return CATEGORIES.find((c) => said.includes(c.label))?.key ?? null;
+  const stripped = said.replace(/녹차/g, "");
+  return CATEGORIES.find((c) => stripped.includes(c.label))?.key ?? null;
+}
+
+/** "라떼 보여줘", "라떼 메뉴판 보여줘" 같은 카테고리 탐색 의도를 메뉴 별칭("라떼"→카페라떼)보다 먼저 잡는다. */
+export function matchCategoryBrowse(said: string): CategoryKey | null {
+  if (BY_LENGTH.some((item) => said.includes(squashName(item.name)))) {
+    return null;
+  }
+  if (!/보여|메뉴판|메뉴|종류|뭐있|목록|카테고리|탭|페이지/.test(said)) {
+    return null;
+  }
+  return matchCategory(said);
 }
 
 export function matchMode(said: string): ModeKey | null {
-  if (/고대비|큰글씨/.test(said)) return "contrast";
+  if (/[고코][대데]비|큰글씨/.test(said)) return "contrast";
   if (/하단|낮게|휠체어|저신장/.test(said)) return "low";
-  if (/음성모드|말로만/.test(said)) return "voice";
-  if (/기본모드/.test(said)) return "basic";
+  if (/음성[모보]드|말로만/.test(said)) return "voice";
+  if (/기본[모보]드/.test(said)) return "basic";
   return null;
 }
 
@@ -94,9 +106,9 @@ function matchQty(said: string): number | null {
 }
 
 const SHOT_RE =
-  /샷|[샤셔사차]추가|[샤셔]추(?:가|(?=$|[.,?!]))|[사차삿삭]추(?:가|(?=$|[.,?!]))|셔츠가|샤츠가|샤타|[샤셔삿삭](?=빼|제외|취소|없|말고)|^추(?:가)?(?:해|해줘|주세요|요)?[.!?]*$/;
-const SYRUP_RE = /시럽|실업/;
-const LIGHT_RE = /연하|연한|진하|진한/;
+  /샷|[샤셔]추(?!천)|[사차]추가|[사차삿삭]추(?:가|(?=$|[.,?!]))|셔츠가|샤츠가|샤타|[샤셔삿삭](?=빼|제외|취소|없|말고)|^추(?:가)?(?:해|해줘|주세요|요)?[.!?]*$/;
+const SYRUP_RE = /(?:시럽|실업|시업|실럽|시합)(?:추가|추(?!천))?/;
+const LIGHT_RE = /연하|연한|연아|연화|진하|진한/;
 const MILK_RE = /(?:일반|그냥|보통|원래|흰)?우유|오트|오토|두유/;
 
 const EXTRA_PATTERNS: [ExtraKey, RegExp][] = [
@@ -107,7 +119,7 @@ const EXTRA_PATTERNS: [ExtraKey, RegExp][] = [
 ];
 
 const NON_EXTRA_ANCHOR_RE =
-  /얼음|따뜻|따듯|뜨겁|뜨거|핫|차갑|차가|아이스|아이수|라지|낮지|낮으로|낮이|큰거|큰걸|큰사이즈|크게|[레네내][귤글길][러로]|귤[러로]|작은|스몰|(?:보통|기본)(?!우유)/gi;
+  /얼음|(?:따뜻하+게|따듯하+게|차갑[게계대]|[창차]악[게계대]|아이스|핫)(?:하지|라(?!(?:떼|때|지|면)))|따뜻|따듯|뜨겁|뜨거|핫|차갑|차가|창악|차악|아이스|아이수|라지|낮지|낮으로|낮이|큰거|큰걸|큰사이즈|크게|[레네내래][귤글길굴규구기그][러로라]|귤[러로]|작은|스몰|(?:보통|기본)(?!우유)/gi;
 
 const REMOVE_OPTION_RE =
   /빼|뺏|뺐|제외|취소|없애|없이|없게|없으|없어|말고|안넣|안할|안해|안주|않|하지마|넣지마|주지마/;
@@ -193,12 +205,12 @@ export function applyOptionSpeech(
     next.temp = "hot";
     hits++;
   }
-  if (/차갑|차가|아이스|아이수|ice|시원|아아/i.test(said)) {
+  if (/차갑|차가|창악|차악|아이스|아이수|ice|시원|아아/i.test(said)) {
     next.temp = "ice";
     hits++;
   }
   if (
-    /라지|낮지|낮으로|낮이|나지(?:주세요|주|요|로|할게|$)|큰거|큰걸|큰사이즈|크게/.test(
+    /라지|낮지|낮으로|낮이|나지(?:주세요|주|요|로|할게|[.,?!]*$)|(?:따뜻하*게|따듯하*게|차갑[게계대]|[창차]악[게계대]|아이스|핫)(?:하지|라)(?:주세요|주|요|로|할게|[.,?!]*$)|큰거|큰걸|큰사이즈|크게/.test(
       said,
     )
   ) {
@@ -206,7 +218,9 @@ export function applyOptionSpeech(
     hits++;
   }
   if (
-    /[레네내][귤글길][러로]|귤[러로]|(?:보통|기본)(?!우유)|작은|스몰/.test(said)
+    /[레네내래][귤글길굴규구기그][러로라]|귤[러로]|(?:보통|기본)(?!우유)|작은|스몰/.test(
+      said,
+    )
   ) {
     next.size = "regular";
     hits++;
@@ -230,9 +244,9 @@ export function applyOptionSpeech(
     if (anchor.key === "ice") {
       next.ice = REMOVE_OPTION_RE.test(tail)
         ? "none"
-        : /적|조금|살짝|덜/.test(tail)
+        : /적|작게|작개|섞게|석게|조금|살짝|덜/.test(tail)
           ? "less"
-          : /많|가득/.test(tail)
+          : /많|만이|만게|양아니|가득/.test(tail)
             ? "more"
             : "normal";
       next.temp = "ice";
