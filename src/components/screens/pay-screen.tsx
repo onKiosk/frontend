@@ -41,9 +41,14 @@ export function PayScreen() {
 
 export function PayFooter() {
   const go = useKioskStore((s) => s.go);
+  const phone = useKioskStore((s) => s.phone);
+  const isStampRegistered = phone.length > 0;
+
   return (
     <>
-      <ActionButton onClick={() => go("point")}>스탬프 적립하기</ActionButton>
+      <ActionButton onClick={() => go("point")} disabled={isStampRegistered}>
+        {isStampRegistered ? "스탬프 적립 완료" : "스탬프 적립하기"}
+      </ActionButton>
       <div className="flex gap-[0.55em]">
         <ActionButton className="flex-1" onClick={() => go("cart")}>
           주문 확인·수정

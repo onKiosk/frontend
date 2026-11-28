@@ -10,15 +10,7 @@ export type SizeKey = "regular" | "large";
 export type PayKey = "card" | "samsung" | "kakao" | "naver" | "apple" | "cash";
 export type ModeKey = "basic" | "low" | "contrast" | "voice";
 export type ScreenKey =
-  | "start"
-  | "menu"
-  | "option"
-  | "cart"
-  | "point"
-  | "pay"
-  | "paying"
-  | "receipt"
-  | "done";
+  "menu" | "option" | "cart" | "point" | "pay" | "paying" | "receipt" | "done";
 
 export interface MenuItem {
   name: string;
@@ -97,6 +89,66 @@ export const ALIASES: [string, string][] = [
   ["케이크", "치즈케이크"],
   ["쿠키", "초코쿠키"],
   ["라떼", "카페라떼"],
+  ["라때", "카페라떼"],
+  ["나떼", "카페라떼"],
+  ["네모네이드", "레몬에이드"],
+  ["콜드부루", "콜드브루"],
+  ["콜드부르", "콜드브루"],
+  ["콜드블루", "콜드브루"],
+  ["콜드두루", "콜드브루"],
+  ["콜드브로", "콜드브루"],
+  ["콜드부로", "콜드브루"],
+  ["콜드으로", "콜드브루"],
+  ["콜드보", "콜드브루"],
+  ["콜드부", "콜드브루"],
+  ["콜드브", "콜드브루"],
+  ["홀드브", "콜드브루"],
+  ["홀드브루", "콜드브루"],
+  ["골드브루", "콜드브루"],
+  ["콜드뷰", "콜드브루"],
+  ["다닐나라떼", "바닐라라떼"],
+  ["다닐나라때", "바닐라라떼"],
+  ["바닐나라떼", "바닐라라떼"],
+  ["바닐나라때", "바닐라라떼"],
+  ["카프치노", "카푸치노"],
+  ["카페목아", "카페모카"],
+  ["요자차", "유자차"],
+  ["대추하나", "대추차"],
+  ["대추주", "대추차"],
+  ["테모마일", "캐모마일"],
+  ["카모마일", "캐모마일"],
+  ["얼그에", "얼그레이"],
+  ["복숭아아이티", "복숭아 아이스티"],
+  ["복숭아아이스트", "복숭아 아이스티"],
+  ["아이티", "복숭아 아이스티"],
+  ["아이스트", "복숭아 아이스티"],
+  ["자몽헤이드", "자몽에이드"],
+  ["청포도에이", "청포도에이드"],
+  ["청포도에이으", "청포도에이드"],
+  ["청포도헤이드", "청포도에이드"],
+  ["키라미수", "티라미수"],
+  ["초코쿠", "초코쿠키"],
+  ["데익을", "베이글"],
+  ["베이을", "베이글"],
+  ["베익을", "베이글"],
+  ["테이글", "베이글"],
+  ["파닐라라떼", "바닐라라떼"],
+  ["파닐랄떼", "바닐라라떼"],
+  ["바닐날어때", "바닐라라떼"],
+  ["바닐라어때", "바닐라라떼"],
+  ["바닐라알았때", "바닐라라떼"],
+  ["파파치노", "카푸치노"],
+  ["치노", "카푸치노"],
+  ["카테모카", "카페모카"],
+  ["페모카", "카페모카"],
+  ["콜트브루", "콜드브루"],
+  ["녹차았대", "녹차라떼"],
+  ["녹차라대", "녹차라떼"],
+  ["녹차았떼", "녹차라떼"],
+  ["캐머마일", "캐모마일"],
+  ["차몽에이드", "자몽에이드"],
+  ["체즈케이크", "치즈케이크"],
+  ["플레잉크루아상", "플레인크루아상"],
 ];
 
 export const EXTRAS: { key: ExtraKey; label: string; price: number }[] = [
@@ -124,11 +176,12 @@ export const PAY_METHODS: { key: PayKey; label: string; hint: string }[] = [
   { key: "cash", label: "현금", hint: "카운터 결제" },
 ];
 
-export const MODES: { key: ModeKey; label: string; sub: string }[] = [
-  { key: "basic", label: "기본 모드", sub: "터치 + 음성" },
-  { key: "low", label: "하단 모드", sub: "휠체어 · 저신장" },
-  { key: "contrast", label: "고대비 · 큰 글씨", sub: "화면·글자 크게" },
-  { key: "voice", label: "음성 모드", sub: "말로만 주문" },
+/** 모드 선택 바에 들어갈 짧은 이름과 설명 */
+export const MODES: { key: ModeKey; short: string; sub: string }[] = [
+  { key: "basic", short: "기본", sub: "터치 + 음성" },
+  { key: "low", short: "하단", sub: "휠체어·저신장" },
+  { key: "contrast", short: "고대비", sub: "큰 글씨" },
+  { key: "voice", short: "음성", sub: "말로만 주문" },
 ];
 
 export const MODE_LABEL: Record<ModeKey, string> = {
@@ -139,27 +192,22 @@ export const MODE_LABEL: Record<ModeKey, string> = {
 };
 
 export const STEPS: { key: ScreenKey; label: string }[] = [
-  { key: "start", label: "① 시작" },
-  { key: "menu", label: "② 메뉴" },
-  { key: "option", label: "③ 옵션" },
-  { key: "cart", label: "④ 장바구니" },
-  { key: "point", label: "⑤ 적립" },
-  { key: "pay", label: "⑥ 결제" },
-  { key: "done", label: "⑦ 완료" },
+  { key: "menu", label: "① 메뉴" },
+  { key: "option", label: "② 옵션" },
+  { key: "cart", label: "③ 장바구니" },
+  { key: "point", label: "④ 적립" },
+  { key: "pay", label: "⑤ 결제" },
+  { key: "done", label: "⑥ 완료" },
 ];
 
 /** 데모용 "말해보기" 예시 문장 */
 export const SAY_CHIPS: Record<ScreenKey, string[]> = {
-  start: [
-    "아메리카노 하나 주세요",
-    "아이스 아메리카노 라지 한 잔 카드로 결제",
-    "고대비 모드로 해 줘",
-  ],
   menu: [
     "아이스 아메리카노 라지로 두 잔",
     "카페라떼 핫 레귤러 카드로 할게요",
     "콜드브루 주세요",
     "시원한 거 추천해 줘",
+    "고대비 모드로 해 줘",
   ],
   option: [
     "따뜻하게요",

@@ -1,6 +1,4 @@
 import {
-  CATEGORIES,
-  MENU_ITEMS,
   type CategoryKey,
   type ModeKey,
   type PayKey,
@@ -8,8 +6,8 @@ import {
 } from "@/data/menu";
 import { won } from "@/lib/korean";
 import {
+  cartCount,
   cartTotal,
-  extrasFor,
   missingOption,
   unitWord,
   type CartLine,
@@ -26,6 +24,8 @@ export interface DialogState {
   say: string | null;
   pay: PayKey | null;
   orderNo: number;
+  /** 서버가 발급한 주문번호(예: "A042"). 없으면 orderNo(임시 번호)를 "N번"으로 읽는다. */
+  orderNumber?: string | null;
 }
 
 /** "아메리카노 ICE 라지 2잔, 치즈케이크 1개" */
@@ -42,8 +42,6 @@ export function cartSummary(cart: CartLine[]) {
 export function bannerText(s: DialogState): string {
   if (s.say) return s.say;
   switch (s.screen) {
-    case "start":
-      return "안녕하세요. 편한 방법을 고르시거나, 드실 메뉴를 말씀해 주세요.";
     case "menu":
       return "드실 메뉴를 말씀하시거나 눌러 주세요";
     case "option": {
@@ -56,7 +54,7 @@ export function bannerText(s: DialogState): string {
     }
     case "cart":
       return s.cart.length
-        ? `${cartSummary(s.cart)}. 총 ${won(cartTotal(s.cart))}, 맞으신가요?`
+        ? `${cartCount(s.cart)}잔 담았어요. 총 ${won(cartTotal(s.cart))} 맞으신가요?`
         : "장바구니가 비어 있어요. 메뉴를 담아 주세요.";
     case "point":
       return "스탬프 적립할 전화번호를 눌러 주세요. 건너뛰려면 “적립 안 할게요”";
@@ -66,35 +64,25 @@ export function bannerText(s: DialogState): string {
       return payingCopy(s.pay).title;
     case "receipt":
       return "결제가 완료됐어요. 영수증을 출력할까요?";
-    case "done":
-      return `주문번호 ${s.orderNo}번입니다. 화면 아래 왼쪽 배출구에서 진동벨을 가져가 주세요. 벨이 울리면 픽업대로 와 주세요.`;
+    case "done": {
+      const no = s.orderNumber ?? `${s.orderNo}번`;
+      return `주문번호 ${no}입니다. 화면 아래 왼쪽 배출구에서 진동벨을 가져가 주세요. 벨이 울리면 픽업대로 와 주세요.`;
+    }
   }
 }
 
-/** 음성 모드에서는 화면을 못 본다고 보고 목록까지 읽어 준다. */
+/** 안내 음성 대사 조합 (모든 모드에서 화면 전환을 안내한다). */
 export function spokenText(s: DialogState): string {
   let text = bannerText(s);
-  if (s.mode !== "voice") return text;
 
   if (s.screen === "menu" && !s.say) {
-    const label = CATEGORIES.find((c) => c.key === s.cat)!.label;
-    const list = MENU_ITEMS.filter((i) => i.cat === s.cat)
-      .map((i) => `${i.name} ${i.price}원${i.soldout ? " 품절" : ""}`)
-      .join(", ");
-    text += `. ${label} 메뉴는 ${list}가 있어요. 다른 종류는 커피, 라떼, 차, 에이드, 디저트라고 말씀해 주세요.`;
-  }
-  if (s.screen === "option" && s.draft && !missingOption(s.draft)) {
-    const names = extrasFor(s.draft.item).map((e) => e.label);
-    if (names.length) text += `. 가능한 추가 옵션은 ${names.join(", ")}이에요.`;
-  }
-  if (s.screen === "menu" && s.cart.length) {
-    text += ` 지금 장바구니에는 ${cartSummary(s.cart)}가 담겨 있어요.`;
+    text = "담으실 메뉴를 선택해주세요.";
   }
   if (s.screen === "pay") {
-    text = `${cartSummary(s.cart)}. ${text} 카드, 삼성페이, 카카오페이, 네이버페이, 애플페이, 현금 중에서 골라 주세요. 메뉴를 더 담거나 스탬프를 적립할 수도 있어요.`;
+    text = "결제방법을 골라주세요.";
   }
   if (s.screen === "paying" && !s.say) {
-    text = `${cartSummary(s.cart)}. 총 ${won(cartTotal(s.cart))}입니다. ${text} ${payingCopy(s.pay).body}`;
+    text = `총 ${won(cartTotal(s.cart))}입니다. ${text} ${payingCopy(s.pay).body}`;
   }
   return text;
 }
